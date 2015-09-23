@@ -1,0 +1,11 @@
+Flask>=0.9
+Flask-RESTful
+Flask-Cache
+Flask-Testing
+flask-discoverer
+werkzeug
+simplejson>=3.3.0
+requests>=2.7.0
+flask-consulate
+astropy
+timeout-decorator
