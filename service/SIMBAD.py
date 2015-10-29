@@ -25,8 +25,8 @@ def get_simbad_identifiers(object_list):
         'lang' : 'adql',
         'format' : 'json'
     }
-    filter = " OR ".join(map(lambda a: "id=\'%s\'"%a,object_list))
-    params['query'] = "SELECT id,oidref FROM ident WHERE %s" % filter
+    ofilter = " OR ".join(map(lambda a: "id=\'%s\'"%a,object_list))
+    params['query'] = "SELECT id,oidref FROM ident WHERE %s" % ofilter
     r = requests.post(QUERY_URL, data=params)
     try:
         results = {'data':[{'object':d[0], 'simbad_id': str(d[1])} for d in r.json()['data']]}
@@ -56,9 +56,10 @@ def do_position_query(RA, DEC, RADIUS):
     params = {
         'request' : 'doQuery',
         'lang' : 'adql',
-        'format' : 'json'
+        'format' : 'json',
+        'maxrec' : current_app.config.get('OBJECTS_SIMBAD_MAX_REC')
     }
-    params['query'] = "SELECT coo_bibcode \
+    params['query'] = "SELECT DISTINCT coo_bibcode \
                        FROM basic \
                        WHERE CONTAINS(POINT('ICRS', ra, dec), CIRCLE('ICRS', %s, %s, %s)) = 1 \
                        AND coo_bibcode IS NOT NULL \

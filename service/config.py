@@ -6,6 +6,8 @@ OBJECTS_SIMBAD_TAP_URL = 'http://simbad.u-strasbg.fr/simbad/sim-tap/sync'
 OBJECTS_CACHE_TIMEOUT = 604800
 # Default radius for cone search
 OBJECTS_DEFAULT_RADIUS = 0.1
+# Maximum number of records to return from cone search
+OBJECTS_SIMBAD_MAX_REC = 10000
 # Config for logging
 OBJECTS_LOGGING = {
     'version': 1,
