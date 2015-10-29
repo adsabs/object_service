@@ -10,6 +10,7 @@ from astropy import units as u
 from astropy.coordinates import SkyCoord
 import time
 import re
+import sys
 import timeout_decorator
 
 class IncorrectPositionFormatError(Exception):
@@ -31,7 +32,7 @@ class ObjectSearch(Resource):
         # 4. return the combined results (cache + SIMBAD)
         stime = time.time()
         # Create a list from the comma-separated input string
-        objects = kwargs.get('objects').split(',')
+        objects = [o.strip() for o in kwargs.get('objects').split(',')]
         object_num = len(objects)
         # Find out for which service we want object identifiers (SIMBAD, NED or both)
         source = kwargs.get('source','all').lower()
@@ -48,8 +49,9 @@ class ObjectSearch(Resource):
                 return result
             # See if we happen to have results stored in our cache
             cached = [current_app.cache.get(o) for o in objects]
-            # and remove the cached objects from our initial list
+            # Remove all 'None' entries
             cached = filter(None, cached)
+            # and remove the cached objects from our initial list
             if cached:
                 current_app.logger.debug('Received %s objects. Using %s entries from cache.' % (object_num, len(cached)))
                 objects = [o for o in objects if o not in [co['object'] for co in cached if co]]
@@ -65,12 +67,12 @@ class ObjectSearch(Resource):
                     duration = time.time() - stime
                     current_app.logger.info('Found identifiers for SIMBAD objects in %s user seconds.' % duration)
                     # Before returning results, cache them
-                    for item in result:
+                    for item in result.get('data',[]):
                         current_app.cache.set(item['object'], item, timeout=current_app.config.get('OBJECTS_CACHE_TIMEOUT'))
                     if cached:
-                        return cached + result
+                        return cached + result.get('data',[])
                     else:
-                        return result
+                        return result.get('data',[])
             elif cached:
                 # We only had cached results
                 return cached
@@ -119,9 +121,9 @@ class ObjectSearch(Resource):
                     for item in result['data']:
                         current_app.cache.set(item['simbad_id'], item, timeout=current_app.config.get('OBJECTS_CACHE_TIMEOUT'))
                     if cached:
-                        return cached + result
+                        return cached + result.get('data',[])
                     else:
-                        return result
+                        return result.get('data',[])
             elif cached:
                 # We only had cached results
                 return cached
@@ -191,13 +193,10 @@ class PositionSearch(Resource):
                 RA, DEC = c.to_string('decimal').split()
             except:
                 raise IncorrectPositionFormatError
-        print "RA: %s" % RA
-        print "DEC: %s" % DEC
-        print "RADIUS: %s" % search_radius
         try:
             result = do_position_query(RA, DEC, search_radius)
         except timeout_decorator.timeout_decorator.TimeoutError:
             current_app.logger.error('Position query %s timed out' % pstring)
             return {'Error': 'Unable to get results!',
                     'Error Info': 'Position query timed out'}, 200
-        print result
+        return result
