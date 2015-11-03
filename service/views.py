@@ -6,11 +6,8 @@ from SIMBAD import translate_object_names
 from SIMBAD import get_simbad_identifiers
 from SIMBAD import get_simbad_objects
 from SIMBAD import do_position_query
-from astropy import units as u
-from astropy.coordinates import SkyCoord
+from SIMBAD import parse_position_string
 import time
-import re
-import sys
 import timeout_decorator
 
 class IncorrectPositionFormatError(Exception):
@@ -32,7 +29,10 @@ class ObjectSearch(Resource):
         # 4. return the combined results (cache + SIMBAD)
         stime = time.time()
         # Create a list from the comma-separated input string
-        objects = [o.strip() for o in kwargs.get('objects').split(',')]
+        try:
+            objects = [o.strip() for o in kwargs.get('objects').split(',')]
+        except:
+            objects = []
         object_num = len(objects)
         # Find out for which service we want object identifiers (SIMBAD, NED or both)
         source = kwargs.get('source','all').lower()
@@ -95,6 +95,9 @@ class ObjectSearch(Resource):
             return {'Error': 'Unable to get results!',
                     'Error Info': 'No identifiers found in POST body'}, 200
         id_num = len(identifiers)
+        if id_num == 0:
+            return {'Error': 'Unable to get results!',
+                    'Error Info': 'No identifiers found in POST body'}, 200
         # Source to query 
         source = 'simbad'
         # Now check if we have anything cached for them
@@ -149,52 +152,14 @@ class PositionSearch(Resource):
         # 3. 80.89416667 -69.75611111:0.166666
         stime = time.time()
         # If we're given a string with qualifiers ('h', etc), convert to one without
-        pstring = re.sub('\ \ +',' ',re.sub('[dhms]',' ',pstring).strip()).replace(' :',':')
-        # Split position string up in position and radius (if specified, otherwise default radius)
-        if pstring.find(':') > -1:
-            position, radius = pstring.split(':')
-            radius = radius.strip()
-            position = position.strip()
-            # If the radius is not decimal, convert it to decimal
-            if radius.count(' ') > 0:
-                if radius.count(' ') > 2:
-                    current_app.logger.warning('Incorrectly formatted radius (%s). Setting default radius!' % radius)
-                    search_radius = current_app.config.get('OBJECTS_DEFAULT_RADIUS')
-                else:
-                    # Assumption: 1 digit means 'seconds', 2 means 'minutes' and 'seconds'
-                    # Under this assumption always pad to get 3 digits and convert to decimal
-                    conversion = [1,0.016666666666666666,0.0002777777777777778]
-                    try:
-                        search_radius = sum([a*b for a,b in zip(map(int,(2-radius.count(' '))*[0] + radius.split()),conversion)])
-                    except:
-                        search_radius = current_app.config.get('OBJECTS_DEFAULT_RADIUS')
-            else:
-                search_radius = radius
-        else:
-            position = pstring.strip()
-            search_radius = current_app.config.get('OBJECTS_DEFAULT_RADIUS')
-        # Now turn the position into a decimal RA and DEC
-        # If we have ony one space in the position string, we are done
-        if position.count(' ') == 1:
-            try:
-                RA, DEC = map(float, position.split())
-            except:
-                raise IncorrectPositionFormatError
-        else:
-            # Before converting, a quick sanity check on the position string
-            # There has to be a '+' or '-' in the string (declination)
-            # The string is assumed to be of the form "hh mm ss [+-]dd mm ss"
-            # so the 4th entry has to start with either + or -
-            if position.split()[3][0] not in ['+','-']:
-                raise IncorrectPositionFormatError
-            # We need to convert to decimal degrees
-            try:
-                c = SkyCoord(position, unit=(u.hourangle, u.deg))
-                RA, DEC = c.to_string('decimal').split()
-            except:
-                raise IncorrectPositionFormatError
         try:
-            result = do_position_query(RA, DEC, search_radius)
+            RA, DEC, radius = parse_position_string(pstring)
+        except Exception, err:
+            current_app.logger.error('Position string could not be parsed: %s' % pstring)
+            return {'Error': 'Unable to get results!',
+                    'Error Info': 'Invalid position string: %s'%pstring}, 200
+        try:
+            result = do_position_query(RA, DEC, radius)
         except timeout_decorator.timeout_decorator.TimeoutError:
             current_app.logger.error('Position query %s timed out' % pstring)
             return {'Error': 'Unable to get results!',
