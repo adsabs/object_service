@@ -54,22 +54,6 @@ def parse_position_string(pstring):
             raise IncorrectPositionFormatError
     return RA, DEC, radius
 
-def translate_object_names(object_list):
-    QUERY_URL = current_app.config.get('OBJECTS_SIMBAD_TAP_URL')
-    params = {
-        'request' : 'doQuery',
-        'lang' : 'adql',
-        'format' : 'json'
-    }
-    filter = " OR ".join(map(lambda a: "id=\'%s\'"%a,object_list))
-    params['query'] = "SELECT id FROM ident WHERE %s" % filter
-    r = requests.post(QUERY_URL, data=params)
-    try:
-        results = [d[0] for d in r.json()['data']]
-    except:
-        results = []
-    return results
-
 def get_simbad_identifiers(object_list):
     QUERY_URL = current_app.config.get('OBJECTS_SIMBAD_TAP_URL')
     params = {
