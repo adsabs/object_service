@@ -47,23 +47,6 @@ class TestDataRetrieval(TestCase):
         return app_
 
     @httpretty.activate
-    def test_object_translation(self):
-        '''Test to see if object translation method behaves as expected'''
-        from SIMBAD import translate_object_names
-        objects = ['Andromeda','LMC']
-        mockdata = {"metadata":[{"name":"id","description":"Identifier","datatype":"char","arraysize":"*","ucd":"meta.id"}],"data":[["NAME ANDROMEDA"],["NAME LMC"]]}
-        QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
-        httpretty.register_uri(
-            httpretty.POST, QUERY_URL,
-            content_type='application/json',
-            status=200,
-            body='%s'%json.dumps(mockdata))
-
-        result = translate_object_names(objects)
-        expected = ["NAME ANDROMEDA","NAME LMC"]
-        self.assertEqual(result, expected)
-
-    @httpretty.activate
     def test_get_simbad_identifiers(self):
         '''Test to see if retrieval of SIMBAD identifiers method behaves as expected'''
         from SIMBAD import get_simbad_identifiers

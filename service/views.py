@@ -2,7 +2,6 @@ from flask import current_app, request
 from flask.ext.restful import Resource
 from flask.ext.discoverer import advertise
 from flask.ext.cache import Cache
-from SIMBAD import translate_object_names
 from SIMBAD import get_simbad_identifiers
 from SIMBAD import get_simbad_objects
 from SIMBAD import do_position_query
@@ -37,16 +36,6 @@ class ObjectSearch(Resource):
         # Find out for which service we want object identifiers (SIMBAD, NED or both)
         source = kwargs.get('source','all').lower()
         if source in ['simbad','all'] and len(objects) > 0:
-            # First translate the user-supplied object names to SIMBAD's canonical versions
-            objects = translate_object_names(objects)
-            # If there are no objects left, SIMBAD was unable to translate them
-            if not objects:
-                current_app.logger.warning('Translation to canonical SIMBAD names resulted in empty list')
-                result = {
-                    'Error': 'Failed to find identifiers for SIMBAD object query!',
-                    'Error Info': 'No objects specified or no canonical SIMBAD objects found'
-                    }
-                return result
             # See if we happen to have results stored in our cache
             cached = [current_app.cache.get(o) for o in objects]
             # Remove all 'None' entries
