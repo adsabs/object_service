@@ -27,7 +27,7 @@ class TestExpectedResults(TestCase):
         '''Test to see if calling the object search endpoint
            works for valid data'''
         QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
-        mockdata =  {"metadata":[{"name":"oid","description":"Object internal identifier","datatype":"long","arraysize":"1","ucd":"meta.record;meta.id"},{"name":"main_id","description":"Main identifier for an object","datatype":"char","arraysize":"*","ucd":"meta.id;meta.main"}],"data":[[3133169,"NAME LMC"],[1575544,"M 31"]]}
+        mockdata =  {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"]]}
         # We will be doing a POST request with a set of identifiers
         identifiers = ["3133169", "1575544"]
         # Mock the reponse
@@ -44,7 +44,7 @@ class TestExpectedResults(TestCase):
         # The response should have a status code 200
         self.assertTrue(r.status_code == 200)
         # See if we received the expected results
-        expected = [{'object': u'NAME LMC', 'simbad_id': '3133169'}, {'object': u'M 31', 'simbad_id': '1575544'}]
+        expected = {u'LMC': {u'id': 3133169, u'canonical': u'LMC'}, u'ANDROMEDA': {u'id': 1575544, u'canonical': u'ANDROMEDA'}}
         self.assertEqual(r.json, expected)
 
     @httpretty.activate
@@ -105,7 +105,7 @@ class TestExpectedResults(TestCase):
         # First we omit the 'identifiers' attribute in the input
         # See if we received the expected results
         self.assertEqual(r.json['Error'], 'Unable to get results!')
-        self.assertEqual(r.json['Error Info'], 'No identifiers found in POST body')
+        self.assertEqual(r.json['Error Info'], 'No identifiers/objects found in POST body')
         # The same should happen with an empty identifiers list
         identifiers = []
         r = self.client.post(
@@ -114,14 +114,14 @@ class TestExpectedResults(TestCase):
             data=json.dumps({'identifiers': identifiers}))
         # See if we received the expected results
         self.assertEqual(r.json['Error'], 'Unable to get results!')
-        self.assertEqual(r.json['Error Info'], 'No identifiers found in POST body')
+        self.assertEqual(r.json['Error Info'], 'No identifiers/objects found in POST body')
 
     @httpretty.activate
     def test_position_search_200(self):
         '''Test to see if calling the position search endpoint
            works for valid data'''
         QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
-        mockdata =  {"metadata":[{"name":"coo_bibcode","description":"Coordinate reference","datatype":"char","arraysize":"19","ucd":"meta.bib.bibcode;pos.eq"}],"data":[["2003A&A...405..111G"],["2011AcA....61..103G"]]}
+        mockdata =  {"data":[["2003A&A...405..111G"],["2011AcA....61..103G"]]}
         # Mock the reponse
         httpretty.register_uri(
             httpretty.POST, QUERY_URL,
@@ -141,7 +141,7 @@ class TestExpectedResults(TestCase):
     def test_position_search_poserror(self):
         '''Test position query with invalid position string'''
         QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
-        mockdata =  {"metadata":[{"name":"coo_bibcode","description":"Coordinate reference","datatype":"char","arraysize":"19","ucd":"meta.bib.bibcode;pos.eq"}],"data":[["2003A&A...405..111G"],["2011AcA....61..103G"]]}
+        mockdata =  {"data":[["2003A&A...405..111G"],["2011AcA....61..103G"]]}
         # Mock the reponse
         httpretty.register_uri(
             httpretty.POST, QUERY_URL,
@@ -176,20 +176,22 @@ class TestExpectedResults(TestCase):
         '''Test to see if calling the id search endpoint
            works for valid data'''
         QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
-        mockdata = {"metadata":[{"name":"id","description":"Identifier","datatype":"char","arraysize":"*","ucd":"meta.id"},{"name":"oidref","description":"Object internal identifier","datatype":"long","arraysize":"1"}],"data":[["NAME ANDROMEDA",1575544],["NAME LMC",3133169]]}
-        # We will be doing a GET request with an object string
-        object_string = 'Andromeda,LMC'
+        mockdata =  {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"]]}
+        # We will be doing a POST request with a set of identifiers
+        objects = ["Andromeda", "LMC"]
         # Mock the reponse
         httpretty.register_uri(
             httpretty.POST, QUERY_URL,
             content_type='application/json',
             status=200,
             body='%s'%json.dumps(mockdata))
-        # Do the GET request
-        url = url_for('objectsearch', objects=object_string)
-        r = self.client.get(url)
+        # Do the POST request
+        r = self.client.post(
+            url_for('objectsearch'),
+            content_type='application/json',
+            data=json.dumps({'objects': objects}))
         # The response should have a status code 200
         self.assertTrue(r.status_code == 200)
         # See if we received the expected results
-        expected = [{'object': u'NAME ANDROMEDA', 'simbad_id': '1575544'}, {'object': u'NAME LMC', 'simbad_id': '3133169'}]
+        expected = {u'LMC': {'id': 3133169, 'canonical': u'LMC'}, u'Andromeda': {'id': 1575544, 'canonical': u'ANDROMEDA'}}
         self.assertEqual(r.json, expected)

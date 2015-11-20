@@ -70,22 +70,44 @@ def get_simbad_identifiers(object_list):
         results = {'Error': 'Unable to get results!', 'Error Info': err}
     return results
 
-def get_simbad_objects(id_list):
+def get_simbad_data(id_list, input_type):
     QUERY_URL = current_app.config.get('OBJECTS_SIMBAD_TAP_URL')
     params = {
         'request' : 'doQuery',
         'lang' : 'adql',
         'format' : 'json'
     }
-    filter = " OR ".join(map(lambda a: "oidref=\'%s\'"%a,id_list))
-    params['query'] = "SELECT DISTINCT basic.OID,main_id FROM basic JOIN ident ON oidref = oid WHERE %s" % filter
+    results = {}
+    # Establish the SIMBAD query, based on the type of input
+    if input_type == 'objects':
+        # For the object names query we want to have all variants returned, cache them, and select only those entries that match the input
+        qfilter = " OR ".join(map(lambda a: "ident2.id=\'%s\'"%a,id_list))
+        params['query'] = 'SELECT ident1.oidref, ident1.id, basic.main_id FROM ident AS ident1 JOIN ident AS ident2 ON ident1.oidref = ident2.oidref JOIN basic ON ident1.oidref = basic.oid WHERE %s;' % qfilter
+    elif input_type == 'identifiers':
+        # For the identifiers query we just want to have the canonical names returned
+        qfilter = " OR ".join(map(lambda a: "oid=\'%s\'"%a,id_list))
+        params['query'] = "SELECT oid, main_id, main_id FROM basic WHERE %s;" % qfilter
+    else:
+        return {"Error": "Unable to get results!", "Error Info": "Unknown input type specified!"}
+    # Fire off the query
     r = requests.post(QUERY_URL, data=params)
+    # Report if the SIMBAD server did not like our query
     if r.status_code != 200:
-        return {'Error': 'Unable to get results!', 'Error Info': 'SIMBAD returned status %s' % r.status_code}
+        return {"Error": "Unable to get results!", "Error Info": "SIMBAD returned status %s" % r.status_code}
+    # Contruct the results
+    # The "data" attribute of the JSON returned consists of tuples with the following entries
+    # 0. SIMBAD identifier
+    # 1. Object name
+    # 2. Canonical object name
     try:
-        results = {'data':[{'object':d[1], 'simbad_id': str(d[0])} for d in r.json()['data']]}
+        if input_type == 'objects':
+            res = {d[1].replace('NAME ',''): {"canonical": d[2].replace('NAME ',''), "id": d[0]} for d in r.json()['data']}
+            results['data'] = res.copy()
+            results['data'].update({k.replace(' ',''):v for k,v in results['data'].items()})
+        else:
+            results['data'] = {d[1].replace('NAME ',''): {"canonical": d[2].replace('NAME ',''), "id": d[0]} for d in r.json()['data']}
     except:
-        results = {'Error': 'Unable to get results!', 'Error Info': 'Bad data returned by SIMBAD'}
+        results = {"Error": "Unable to get results!", "Error Info": "Bad data returned by SIMBAD"}
     return results
 
 @timeout_decorator.timeout(5)

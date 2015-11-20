@@ -49,33 +49,33 @@ class TestDataRetrieval(TestCase):
     @httpretty.activate
     def test_get_simbad_identifiers(self):
         '''Test to see if retrieval of SIMBAD identifiers method behaves as expected'''
-        from SIMBAD import get_simbad_identifiers
+        from SIMBAD import get_simbad_data
         objects = ['Andromeda','LMC']
-        mockdata = {"metadata":[{"name":"id","description":"Identifier","datatype":"char","arraysize":"*","ucd":"meta.id"},{"name":"oidref","description":"Object internal identifier","datatype":"long","arraysize":"1"}],"data":[["NAME ANDROMEDA",1575544],["NAME LMC",3133169]]}
+        mockdata = {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"]]}
         QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
         httpretty.register_uri(
             httpretty.POST, QUERY_URL,
             content_type='application/json',
             status=200,
             body='%s'%json.dumps(mockdata))
-        result = get_simbad_identifiers(objects)
-        expected = {'data': [{'object': u'NAME ANDROMEDA', 'simbad_id': '1575544'}, {'object': u'NAME LMC', 'simbad_id': '3133169'}]}
+        result = get_simbad_data(objects, 'objects')
+        expected = {'data': {u'LMC': {'id': 3133169, 'canonical': u'LMC'}, u'ANDROMEDA': {'id': 1575544, 'canonical': u'ANDROMEDA'}}}
         self.assertEqual(result, expected)
 
     @httpretty.activate
-    def test_get_simbad_identifiers(self):
+    def test_get_simbad_objects(self):
         '''Test to see if retrieval of SIMBAD objects method behaves as expected'''
-        from SIMBAD import get_simbad_objects
+        from SIMBAD import get_simbad_data
         identifiers = ["3133169", "1575544"]
-        mockdata = {"metadata":[{"name":"oid","description":"Object internal identifier","datatype":"long","arraysize":"1","ucd":"meta.record;meta.id"},{"name":"main_id","description":"Main identifier for an object","datatype":"char","arraysize":"*","ucd":"meta.id;meta.main"}],"data":[[3133169,"NAME LMC"],[1575544,"M 31"]]}
+        mockdata = {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"]]}
         QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
         httpretty.register_uri(
             httpretty.POST, QUERY_URL,
             content_type='application/json',
             status=200,
             body='%s'%json.dumps(mockdata))
-        result = get_simbad_objects(identifiers)
-        expected = {'data': [{'object': u'NAME LMC', 'simbad_id': '3133169'}, {'object': u'M 31', 'simbad_id': '1575544'}]}
+        result = get_simbad_data(identifiers, 'identifiers')
+        expected = {'data': {u'LMC': {'id': 3133169, 'canonical': u'LMC'}, u'ANDROMEDA': {'id': 1575544, 'canonical': u'ANDROMEDA'}}}
         self.assertEqual(result, expected)
 
     @httpretty.activate
@@ -84,7 +84,7 @@ class TestDataRetrieval(TestCase):
         from SIMBAD import parse_position_string
         from SIMBAD import do_position_query
         pstring = "80.89416667 -69.75611111:0.166666"
-        mockdata = {"metadata":[{"name":"coo_bibcode","description":"Coordinate reference","datatype":"char","arraysize":"19","ucd":"meta.bib.bibcode;pos.eq"}],"data":[["2003A&A...405..111G"],["2011AcA....61..103G"]]}
+        mockdata = {"data":[["2003A&A...405..111G"],["2011AcA....61..103G"]]}
         QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
         httpretty.register_uri(
             httpretty.POST, QUERY_URL,

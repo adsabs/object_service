@@ -8,21 +8,32 @@ Micro service implementation of ADS object searches. This micro service supports
 The following queries are supported to retrieve information from SIMBAD:
 
 #### Object Search
-This search accepts either a string of object names (GET query) or a list of SIMBAD object identifiers (POST query). Given a string of object names, this services returns the SIMBAD identifiers (if found) associated with these objects. When a list of SIMBAD identifiers is given, the service returns the (canonical) object names associated with the identifiers.
+This search accepts either a list of object names or a list of SIMBAD object identifiers (POST queries). Both queries return JSON where the keys are object names and the values are dictionaries containing the (SIMBAD) canonical object name and the SIMBAD identifier. For example
+
+    {
+		"LMC" : {"canonical": "LMC",
+		         "id": 12345
+				 },
+		"Andromeda": {"canonical": "NAME Andromeda",
+		              "id": 342536
+	             },
+		"FooBar": None
+	}
+
+where a value of `None` means that the associated object name could not be identified in the SIMBAD database.
 
 1. Retrieve SIMBAD identifiers for a string of object names
 
 Using the Python "requests" module, this works as follows:
 
-	object_string = "Andromeda, M11, M13"
-	queryURL = 'http://localhost:4000/%s' % object_string
-	r = requests.get(queryURL)
+    headers = {'Content-type': 'application/json', 'Accept':'text/plain'}
+	queryURL = 'http://localhost:4000/'
+	payload = {"objects": ["M11", "M13", "Andromeda"]}
+	r = requests.post(queryURL, data=json.dumps(payload), headers=headers)
 
 and the results, returned through `r.json()`, are
 
-    [{u'object': u'M  11', u'simbad_id': u'2613692'}, {u'object': u'M  13', u'simbad_id': u'2894585'}, {u'object': u'NAME ANDROMEDA', u'simbad_id': u'1575544'}]
-
-in other words, a list of dictionaries with key `object` for the canonical object name, and key `simbad_id` for the SIMBAD identifier.
+    {"M11":{"canonical":"M  11", "id":2613692}, "M13":{"canonical": "M  13", "id":2894585}, "Andromeda":{"canonical":"NAME ANDROMEDA", "id":1575544}}
 
 2. Retrieve canonical object names for a list of SIMBAD identifiers
 
@@ -30,12 +41,12 @@ In this case this works as follows:
 
     headers = {'Content-type': 'application/json', 'Accept':'text/plain'}
 	queryURL = 'http://localhost:4000/'
-	payload = {'identifiers': ["3133169", "1575544", "2419335", "3253618"]}
+	payload = {"identifiers": [3133169, 1575544, 2419335, 3253618]}
 	r = requests.post(queryURL, data=json.dumps(payload), headers=headers)
 
 and the results in this case are
 
-    [{u'object': u'NAME SMC', u'simbad_id': u'3253618'}, {u'object': u'M  31', u'simbad_id': u'1575544'}, {u'object': u'NAME GAL CENTER', u'simbad_id': u'2419335'}, {u'object': u'NAME LMC', u'simbad_id': u'3133169'}]
+    {"3253618":{"canonical": "NAME SMC", "id":3253618}, "1575544":{"canonical": "M  31", "id":1575544}, "2419335":{"canonical": "NAME GAL CENTER", "id":2419335}, "3133169":{"canonical": "NAME LMC", "id": 3133169}}
 
 #### Positional ("Cone") Search
 This search takes a position string and (optionally) a search radius. Position searches locate the papers dealing with celestial objects located within the specified radius of the specified position. The syntax for position searches is: 
