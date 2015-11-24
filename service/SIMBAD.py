@@ -54,22 +54,6 @@ def parse_position_string(pstring):
             raise IncorrectPositionFormatError
     return RA, DEC, radius
 
-def get_simbad_identifiers(object_list):
-    QUERY_URL = current_app.config.get('OBJECTS_SIMBAD_TAP_URL')
-    params = {
-        'request' : 'doQuery',
-        'lang' : 'adql',
-        'format' : 'json'
-    }
-    ofilter = " OR ".join(map(lambda a: "id=\'%s\'"%a,object_list))
-    params['query'] = "SELECT id,oidref FROM ident WHERE %s" % ofilter
-    r = requests.post(QUERY_URL, data=params)
-    try:
-        results = {'data':[{'object':d[0], 'simbad_id': str(d[1])} for d in r.json()['data']]}
-    except Exception, err:
-        results = {'Error': 'Unable to get results!', 'Error Info': err}
-    return results
-
 def get_simbad_data(id_list, input_type):
     QUERY_URL = current_app.config.get('OBJECTS_SIMBAD_TAP_URL')
     params = {
@@ -80,8 +64,9 @@ def get_simbad_data(id_list, input_type):
     results = {}
     # Establish the SIMBAD query, based on the type of input
     if input_type == 'objects':
+        results['data'] = {k:None for k in id_list}
         # For the object names query we want to have all variants returned, cache them, and select only those entries that match the input
-        qfilter = " OR ".join(map(lambda a: "ident2.id=\'%s\'"%a,id_list))
+        qfilter = " OR ".join(map(lambda a: "ident2.id=\'%s\'"%a.upper(),id_list))
         params['query'] = 'SELECT ident1.oidref, ident1.id, basic.main_id FROM ident AS ident1 JOIN ident AS ident2 ON ident1.oidref = ident2.oidref JOIN basic ON ident1.oidref = basic.oid WHERE %s;' % qfilter
     elif input_type == 'identifiers':
         # For the identifiers query we just want to have the canonical names returned

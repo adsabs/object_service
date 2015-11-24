@@ -69,7 +69,7 @@ class ObjectSearch(Resource):
                         current_app.cache.set(ident.upper(), value, timeout=current_app.config.get('OBJECTS_CACHE_TIMEOUT'))
                     # Now pick the entries in the results that correspond with the original object names
                     if input_type == 'objects':
-                        result['data'] = {k: result['data'].get(k.upper(),None) for k in identifiers}
+                        result['data'] = {k: result['data'].get(k.upper()) for k in identifiers}
                     # If we had results from cache, merge these in
                     if cached:
                         res = cached.copy()
