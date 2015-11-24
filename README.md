@@ -14,7 +14,7 @@ This search accepts either a list of object names or a list of SIMBAD object ide
 		"LMC" : {"canonical": "LMC",
 		         "id": 12345
 				 },
-		"Andromeda": {"canonical": "NAME Andromeda",
+		"Andromeda": {"canonical": "ANDROMEDA",
 		              "id": 342536
 	             },
 		"FooBar": None
@@ -33,7 +33,7 @@ Using the Python "requests" module, this works as follows:
 
 and the results, returned through `r.json()`, are
 
-    {"M11":{"canonical":"M  11", "id":2613692}, "M13":{"canonical": "M  13", "id":2894585}, "Andromeda":{"canonical":"NAME ANDROMEDA", "id":1575544}}
+    {"M11":{"canonical":"M  11", "id":2613692}, "M13":{"canonical": "M  13", "id":2894585}, "Andromeda":{"canonical":"ANDROMEDA", "id":1575544}}
 
 2. Retrieve canonical object names for a list of SIMBAD identifiers
 
@@ -46,7 +46,7 @@ In this case this works as follows:
 
 and the results in this case are
 
-    {"3253618":{"canonical": "NAME SMC", "id":3253618}, "1575544":{"canonical": "M  31", "id":1575544}, "2419335":{"canonical": "NAME GAL CENTER", "id":2419335}, "3133169":{"canonical": "NAME LMC", "id": 3133169}}
+    {"3253618":{"canonical": "SMC", "id":3253618}, "1575544":{"canonical": "M  31", "id":1575544}, "2419335":{"canonical": "GAL CENTER", "id":2419335}, "3133169":{"canonical": "LMC", "id": 3133169}}
 
 #### Positional ("Cone") Search
 This search takes a position string and (optionally) a search radius. Position searches locate the papers dealing with celestial objects located within the specified radius of the specified position. The syntax for position searches is: 
