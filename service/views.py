@@ -25,6 +25,7 @@ class ObjectSearch(Resource):
         objects = []
         try:
             identifiers = request.json['identifiers']
+            identifiers = map(str, identifiers)
             input_type  = 'identifiers'
         except:
             try:
