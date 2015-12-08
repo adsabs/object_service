@@ -1,3 +1,7 @@
+### 1.0.4
+
+* addition of facets as allowed input type (Github 15)
+
 ### 1.0.3
 
 * bug fix (Github issue 10) and cleanup of SIMBAD module
