@@ -23,21 +23,22 @@ class ObjectSearch(Resource):
         # Get the supplied list of identifiers
         identifiers = []
         objects = []
-        try:
-            identifiers = request.json['identifiers']
-            identifiers = map(str, identifiers)
-            input_type  = 'identifiers'
-        except:
+        facets = []
+        itype = None
+        for itype in ['identifiers', 'objects', 'facets']:
             try:
-                identifiers = request.json['objects']
-                input_type  = 'objects'
+                identifiers = request.json[itype]
+                identifiers = map(str, identifiers)
+                input_type  = itype
             except:
-                current_app.logger.error('No identifiers and objects were specified for SIMBAD object query')
-                return {"Error": "Unable to get results!",
-                    "Error Info": "No identifiers/objects found in POST body"}, 200
-        # We should either have a list of identifiers or a list of object names
-        if len(identifiers) == 0 and len(objects) == 0:
+                pass
+        if not itype:
             current_app.logger.error('No identifiers and objects were specified for SIMBAD object query')
+            return {"Error": "Unable to get results!",
+                    "Error Info": "No identifiers/objects found in POST body"}, 200
+        # We should either have a list of identifiers, a list of object names or a list of facets
+        if len(identifiers) == 0 and len(objects) == 0 and len(facets) == 0:
+            current_app.logger.error('No identifiers, objects or facets were specified for SIMBAD object query')
             return {"Error": "Unable to get results!",
                     "Error Info": "No identifiers/objects found in POST body"}, 200
         id_num = len(identifiers)
@@ -52,7 +53,7 @@ class ObjectSearch(Resource):
              # If we have cached values, filter those out from the initial list
             if cached:
                 current_app.logger.debug('Received %s %s. Using %s entries from cache.' % (id_num, input_type, len(cached)))
-                identifiers = [id for id in identifiers if id.upper() not in cached]
+                identifiers = [id for id in identifiers if not current_app.cache.get(id.upper())]
             if identifiers:
                 ident_upper = [i.upper() for i in identifiers]
                 # We have identifiers, not found in the cache
