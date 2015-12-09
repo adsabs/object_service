@@ -1,3 +1,7 @@
+### 1.0.5
+
+* process top level facets properly
+
 ### 1.0.4
 
 * addition of facets as allowed input type (Github 15)
