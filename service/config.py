@@ -24,7 +24,7 @@ OBJECTS_LOGGING = {
             'formatter': 'default',
             'level': 'INFO',
             'class': 'logging.handlers.TimedRotatingFileHandler',
-            'filename': '/tmp/object_service.log',
+            'filename': '/tmp/object_service_app.log',
         },
         'console': {
             'formatter': 'default',
