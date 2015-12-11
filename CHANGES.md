@@ -1,3 +1,7 @@
+### 1.0.6
+
+* for identifier query, output dictionary has identifiers are keys
+
 ### 1.0.5
 
 * process top level facets properly
