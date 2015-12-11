@@ -103,11 +103,11 @@ def get_simbad_data(id_list, input_type):
     # 2. Canonical object name
     try:
         if input_type == 'objects':
-            res = {d[1].replace('NAME ',''): {"canonical": d[2].replace('NAME ',''), "id": d[0]} for d in r.json()['data']}
+            res = {d[1].replace('NAME ',''): {"canonical": d[2].replace('NAME ',''), "id": str(d[0])} for d in r.json()['data']}
             results['data'] = res.copy()
             results['data'].update({k.replace(' ',''):v for k,v in results['data'].items()})
         elif input_type == 'identifiers':
-            results['data'] = {d[1].replace('NAME ',''): {"canonical": d[2].replace('NAME ',''), "id": d[0]} for d in r.json()['data']}
+            results['data'] = {str(d[0]): {"canonical": d[2].replace('NAME ',''), "id": str(d[0])} for d in r.json()['data']}
         else:
             results['data'] = {"%s/%s/%s" % (idmap.get(str(d[0]))['level'], idmap.get(str(d[0]))['type'], d[0]):"%s/%s/%s" % (idmap.get(str(d[0]))['level'], idmap.get(str(d[0]))['type'], d[2].replace('NAME ','')) for d in r.json()['data']}
             if len(top_level) > 0:

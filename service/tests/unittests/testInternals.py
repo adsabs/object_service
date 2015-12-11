@@ -59,7 +59,7 @@ class TestDataRetrieval(TestCase):
             status=200,
             body='%s'%json.dumps(mockdata))
         result = get_simbad_data(objects, 'objects')
-        expected = {'data': {u'LMC': {'id': 3133169, 'canonical': u'LMC'}, u'ANDROMEDA': {'id': 1575544, 'canonical': u'ANDROMEDA'}}}
+        expected = {'data': {u'LMC': {'id': '3133169', 'canonical': u'LMC'}, u'ANDROMEDA': {'id': '1575544', 'canonical': u'ANDROMEDA'}}}
         self.assertEqual(result, expected)
 
     @httpretty.activate
@@ -75,7 +75,7 @@ class TestDataRetrieval(TestCase):
             status=200,
             body='%s'%json.dumps(mockdata))
         result = get_simbad_data(identifiers, 'identifiers')
-        expected = {'data': {u'LMC': {'id': 3133169, 'canonical': u'LMC'}, u'ANDROMEDA': {'id': 1575544, 'canonical': u'ANDROMEDA'}}}
+        expected = {'data': {u'3133169': {'id': '3133169', 'canonical': u'LMC'}, u'1575544': {'id': '1575544', 'canonical': u'ANDROMEDA'}}}
         self.assertEqual(result, expected)
 
     @httpretty.activate
