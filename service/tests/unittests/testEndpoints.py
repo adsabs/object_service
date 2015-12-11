@@ -44,7 +44,7 @@ class TestExpectedResults(TestCase):
         # The response should have a status code 200
         self.assertTrue(r.status_code == 200)
         # See if we received the expected results
-        expected = {u'LMC': {u'id': 3133169, u'canonical': u'LMC'}, u'ANDROMEDA': {u'id': 1575544, u'canonical': u'ANDROMEDA'}}
+        expected = {u'3133169': {u'id': '3133169', u'canonical': u'LMC'}, u'1575544': {u'id': '1575544', u'canonical': u'ANDROMEDA'}}
         self.assertEqual(r.json, expected)
 
     @httpretty.activate
@@ -193,5 +193,5 @@ class TestExpectedResults(TestCase):
         # The response should have a status code 200
         self.assertTrue(r.status_code == 200)
         # See if we received the expected results
-        expected = {u'LMC': {'id': 3133169, 'canonical': u'LMC'}, u'Andromeda': {'id': 1575544, 'canonical': u'ANDROMEDA'}}
+        expected = {u'LMC': {'id': '3133169', 'canonical': u'LMC'}, u'Andromeda': {'id': '1575544', 'canonical': u'ANDROMEDA'}}
         self.assertEqual(r.json, expected)
