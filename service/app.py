@@ -1,6 +1,6 @@
 import os
 from flask import Flask
-from views import ObjectSearch, PositionSearch
+from views import ObjectSearch, PositionSearch, QuerySearch
 from flask.ext.restful import Api
 from flask.ext.discoverer import Discoverer
 from flask.ext.consulate import Consul, ConsulConnectionError
@@ -30,6 +30,7 @@ def create_app():
     api = Api(app)
     api.add_resource(ObjectSearch, '/', '/<string:objects>', '/<string:objects>/<string:source>')
     api.add_resource(PositionSearch, '/pos/<string:pstring>')
+    api.add_resource(QuerySearch, '/query')
 
     discoverer = Discoverer(app)
 
