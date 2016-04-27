@@ -125,3 +125,34 @@ class TestTimeOut(TestCase):
         except timeout_decorator.timeout_decorator.TimeoutError:
             res = 'timeout'
         self.assertEqual(res, 'timeout')
+
+class TestQueryStringParsing(TestCase):
+
+    '''Check if the query parser works as expected'''
+
+    def create_app(self):
+        '''Create the wsgi application'''
+        _app = app.create_app()
+        return _app
+
+    def test_query_parsing(self):
+        '''Test parsing of query strings'''
+        from utils import get_objects_from_query_string as parse
+        test_cases = {
+            'object:Bla':['Bla'],
+            'object:"Small Magellanic Cloud"':['Small Magellanic Cloud'],
+            'object:"Bla OR Something"':['Bla', 'Something'],
+            'object:(("*Foo +Ba" OR SMC) AND Andromeda)':['*Foo +Ba', 'SMC', 'Andromeda'],
+            'object:((("*Foo +Ba" OR SMC) AND Andromeda) OR "Something Else")':['*Foo +Ba', 'SMC', 'Andromeda', 'Something Else'],
+            'mod1:bar object:Bla mod2:foo':['Bla'],
+            'mod1:bar object:"Bla OR Something" mod2:foo':['Bla', 'Something'],
+            'bibstem:"A&A" object:(("*Foo +Ba" OR SMC) AND Andromeda) year:2015':['*Foo +Ba', 'SMC', 'Andromeda'],
+            'bibstem:A&A object:(("*Foo +Ba" OR SMC) AND Andromeda) year:2015':['*Foo +Ba', 'SMC', 'Andromeda'],
+            'object:Foo object:Bar':['Foo', 'Bar'],
+            'object:Foo OR object:Bar':['Foo', 'Bar'],
+            'object:("Foo Bar" OR Something)':['Foo Bar', 'Something'],
+            'mod1:bar object:"Bla OR Something" mod2:foo object:"X OR Y"':['Bla', 'Something', 'X', 'Y']
+            }
+
+        for qstring, expected in test_cases.items():
+            self.assertEqual(parse(qstring), expected)

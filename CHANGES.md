@@ -1,6 +1,10 @@
+### 1.0.7
+
+* cleanup and allow query as input
+
 ### 1.0.6
 
-* for identifier query, output dictionary has identifiers are keys
+* for identifier query, output dictionary has identifiers as keys
 
 ### 1.0.5
 

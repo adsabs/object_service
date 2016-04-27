@@ -195,3 +195,27 @@ class TestExpectedResults(TestCase):
         # See if we received the expected results
         expected = {u'LMC': {'id': '3133169', 'canonical': u'LMC'}, u'Andromeda': {'id': '1575544', 'canonical': u'ANDROMEDA'}}
         self.assertEqual(r.json, expected)
+
+    @httpretty.activate
+    def test_query_search_200(self):
+        '''test translation Solr query with "object:" modifier'''
+        QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
+        mockdata =  {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"],[3253618, "NAME SMC", "NAME SMC"]]}
+        # The test query we will provide
+        query = 'bibstem:A&A object:((Andromeda OR SMC) AND LMC) year:2015'
+        # Mock the reponse
+        httpretty.register_uri(
+            httpretty.POST, QUERY_URL,
+            content_type='application/json',
+            status=200,
+            body='%s'%json.dumps(mockdata))
+        # Do the POST request
+        r = self.client.post(
+            url_for('querysearch'),
+            content_type='application/json',
+            data=json.dumps({'query': query}))
+        # The response should have a status code 200
+        self.assertTrue(r.status_code == 200)
+        # See if we received the expected results
+        expected = {"query": "bibstem:A&A simbid:((1575544 OR 3253618) AND 3133169) year:2015"}
+        self.assertEqual(r.json, expected)
