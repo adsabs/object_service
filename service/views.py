@@ -25,7 +25,7 @@ class ObjectSearch(Resource):
         identifiers = []
         objects = []
         facets = []
-        itype = None
+        input_type = None
         for itype in ['identifiers', 'objects', 'facets']:
             try:
                 identifiers = request.json[itype]
