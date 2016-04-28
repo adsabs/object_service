@@ -1,3 +1,7 @@
+### 1.0.8
+
+* deal with format of BBB requests in case of query input
+
 ### 1.0.7
 
 * cleanup and allow query as input

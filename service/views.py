@@ -141,9 +141,17 @@ class QuerySearch(Resource):
             current_app.logger.error('No query was specified for SIMBAD object search')
             return {"Error": "Unable to get results!",
                     "Error Info": "No identifiers/objects found in POST body"}, 200
+        # If we get the request from BBB, the value of 'query' is actually an array
+        if isinstance(query, list):
+            try:
+                solr_query = query[0]
+            except:
+                solr_query = ''
+        else:
+            solr_query = query
         # If we receive a (Solr) query string, we need to parse out the object names
         try:
-            identifiers = get_objects_from_query_string(query)
+            identifiers = get_objects_from_query_string(solr_query)
         except:
             current_app.logger.error('Parsing the identifiers out of the query string blew up!')
             return {"Error": "Unable to get results!",
@@ -190,7 +198,7 @@ class QuerySearch(Resource):
                     else:
                         name2id = result.get('data',{})
                 # Create the new Solr query and return the result
-                new_query = query.replace('object:','simbid:')
+                new_query = solr_query.replace('object:','simbid:')
                 for oname in identifiers:
                     try:
                         SIMBADid = name2id.get(oname).get('id','0')
@@ -201,7 +209,7 @@ class QuerySearch(Resource):
             elif cached:
                 # We only had cached results
                 # Create the new Solr query and return the result
-                new_query = query.replace('object:','simbid:')
+                new_query = solr_query.replace('object:','simbid:')
                 for oname in identifiers_orig:
                    try:
                        SIMBADid = cached.get(oname).get('id','0')
