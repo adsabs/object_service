@@ -142,7 +142,7 @@ class QuerySearch(Resource):
             return {"Error": "Unable to get results!",
                     "Error Info": "No identifiers/objects found in POST body"}, 200
         # If we get the request from BBB, the value of 'query' is actually an array
-        if isinstance(query, list)
+        if isinstance(query, list):
             try:
                 solr_query = query[0]
             except:
