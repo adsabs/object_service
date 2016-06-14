@@ -1,3 +1,7 @@
+### 1.0.9
+
+* update of query processing 
+
 ### 1.0.8
 
 * deal with format of BBB requests in case of query input
