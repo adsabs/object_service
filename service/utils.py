@@ -80,5 +80,4 @@ def get_objects_from_query_string(qstring):
             objlist =  flatten([o.replace(' AND ','$').replace(' OR ','$').split('$') for o in objs])
         else:
             objlist = objs
-
     return objlist

@@ -134,6 +134,7 @@ class QuerySearch(Resource):
         identifiers = []
         query = None
         itype = None
+        name2id = {}
         try:
             query = request.json['query']
             input_type = 'query'
@@ -149,6 +150,7 @@ class QuerySearch(Resource):
                 solr_query = ''
         else:
             solr_query = query
+        new_query = solr_query.replace('object:','simbid:')
         # If we receive a (Solr) query string, we need to parse out the object names
         try:
             identifiers = get_objects_from_query_string(solr_query)
@@ -166,56 +168,25 @@ class QuerySearch(Resource):
                     "Error Info": "No identifiers/objects found in POST body"}, 200
         # Source to query 
         source = 'simbad'
-        # Now check if we have anything cached for them
-        cached = {id:current_app.cache.get(id.upper()) for id in identifiers if current_app.cache.get(id.upper())}
         if source in ['simbad','all'] and len(identifiers) > 0:
-             # If we have cached values, filter those out from the initial list
-            if cached:
-                current_app.logger.debug('Received %s %s. Using %s entries from cache.' % (id_num, input_type, len(cached)))
-                identifiers = [id for id in identifiers if not current_app.cache.get(id.upper())]
             if identifiers:
-                ident_upper = [i.upper() for i in identifiers]
-                # We have identifiers, not found in the cache
-                result = get_simbad_data(identifiers, 'objects')
-                if 'Error' in result:
-                    # An error was returned!
-                    current_app.logger.error('Failed to find data for SIMBAD %s query!'%input_type)
-                    return result
-                else:
-                    # We have results!
-                    duration = time.time() - stime
-                    current_app.logger.info('Found objects for SIMBAD %s in %s user seconds.' % (input_type, duration))
-                    # Before returning results, cache them
-                    for ident, value in result['data'].items():
-                        current_app.cache.set(ident.upper(), value, timeout=current_app.config.get('OBJECTS_CACHE_TIMEOUT'))
-                    # Now pick the entries in the results that correspond with the original object names
-                    result['data'] = {k: result['data'].get(k.upper()) for k in identifiers}
-                    # If we had results from cache, merge these in
-                    if cached:
-                        name2id = cached.copy()
-                        name2id.update(result.get('data',{}))
-                    # Otherwise just send back the results
-                    else:
-                        name2id = result.get('data',{})
-                # Create the new Solr query and return the result
-                new_query = solr_query.replace('object:','simbid:')
-                for oname in identifiers:
-                    try:
-                        SIMBADid = name2id.get(oname).get('id','0')
+                for ident in identifiers:
+                    result = get_simbad_data([ident], 'objects')
+                    if 'Error' in result:
+                        # An error was returned!
+                        current_app.logger.error('Failed to find data for SIMBAD %s query!'%input_type)
+                        return result
+                    try:  
+                        SIMBADid =[e.get('id',0) for e in result['data'].values()][0]
                     except:
                         SIMBADid = '0'
-                    new_query = new_query.replace(oname, SIMBADid) 
-                return {"query": new_query}
-            elif cached:
-                # We only had cached results
-                # Create the new Solr query and return the result
-                new_query = solr_query.replace('object:','simbid:')
-                for oname in identifiers_orig:
-                   try:
-                       SIMBADid = cached.get(oname).get('id','0')
-                   except:
-                       SIMBADid = '0'
-                   new_query = new_query.replace(oname, SIMBADid)
+                    name2id[ident] = SIMBADid 
+                for oname in identifiers:
+                    try:
+                        SIMBADid = name2id.get(oname)
+                    except:
+                        SIMBADid = '0'
+                    new_query = new_query.replace(oname, SIMBADid)
                 return {"query": new_query}
             else:
                 # This should never happen
