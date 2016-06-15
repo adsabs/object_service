@@ -158,6 +158,7 @@ class QuerySearch(Resource):
             current_app.logger.error('Parsing the identifiers out of the query string blew up!')
             return {"Error": "Unable to get results!",
                     "Error Info": "No objects found in query string"}, 200
+        identifiers = [iden for iden in identifiers if iden.lower() not in ['object',':']]
         # How many object names did we fid?
         id_num = len(identifiers)
         # Keep a list with the object names we found

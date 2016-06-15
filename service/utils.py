@@ -73,8 +73,10 @@ def get_objects_from_query_string(qstring):
         objlist = [o for o in flatten(tmp) if o not in ['OR','AND']]
     else:
         # We are left with cases with additional modifiers
-        tmp = [e.asList() for e in results if not isinstance(e, basestring) and 'object' in e.values()]
+        tmp = [e.asList() for e in results if not isinstance(e, basestring) and 'object' in flatten(e.asList())]
         objs = [o for o in flatten(tmp) if o not in ['OR','AND',':','object']]
+#        tmp = [e.asList() for e in results if not isinstance(e, basestring) and 'object' in e.values()]
+#        objs = [o for o in flatten(tmp) if o not in ['OR','AND',':','object']]
         if 'object:"' in qstring:
             # In this case we have to be careful that object string could contain Boolean operators
             objlist =  flatten([o.replace(' AND ','$').replace(' OR ','$').split('$') for o in objs])
