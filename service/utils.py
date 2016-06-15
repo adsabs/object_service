@@ -1,6 +1,9 @@
+import re
 from pyparsing import (Literal, CaselessKeyword, Forward, Regex, QuotedString, Suppress,
     Optional, Group, FollowedBy, infixNotation, opAssoc, ParseException, ParserElement)
 ParserElement.enablePackrat()
+
+re_operator = re.compile(r'''^(?P<operator>.*?\()(?P<rest>object:.*)''')
 
 COLON,LBRACK,RBRACK,LBRACE,RBRACE,TILDE,CARAT = map(Literal,":[]{}~^")
 LPAR,RPAR = map(Suppress,"()")
@@ -58,7 +61,47 @@ def flatten(lis):
             new_lis.append(item)
     return new_lis
 
+def isBalanced(s):
+    """
+    Checks if a string has balanced parentheses. This method can be easily extended to
+    include braces, curly brackets etc by adding the opening/closing equivalents 
+    in the obvious places.
+    """
+    expr = ''.join([x for x in s if x in '()'])
+    if len(expr)%2!=0:
+        return False
+    opening=set('(')
+    match=set([ ('(',')') ])
+    stack=[]
+    for char in expr:
+        if char in opening:
+            stack.append(char)
+        else:
+            if len(stack)==0:
+                return False
+            lastOpen=stack.pop()
+            if (lastOpen, char) not in match:
+                return False
+    return len(stack)==0
+
 def get_objects_from_query_string(qstring):
+    # Just in case somebody inserted a space with operators
+    qstring = re.sub('\(\s+','(object:', qstring)
+    balanced = isBalanced(qstring)
+    if not balanced:
+        return []
+    # Check if "object:" is being offered with an operator working on it
+    if balanced and "(object:" in qstring:
+        # We have a query of the form
+        # o1(o2(...oN(object:...))...)
+        # with N operators working on "object:", which necessarily means that
+        # there are N closing parentheses.
+        mat = re_operator.search(qstring)
+        operator = mat.group('operator')
+        Nparenth = operator.count('(')
+        remainder = mat.group('rest') 
+        if remainder[-Nparenth:] == ")"*Nparenth:
+            qstring = remainder[:-Nparenth]
     results = expression.parseString(qstring.replace('&','+'), parseAll=True)[0]
     check = len([e.asList() for e in results if not isinstance(e, basestring)])
     if check == 0:
