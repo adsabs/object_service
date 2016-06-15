@@ -1,3 +1,7 @@
+### 1.0.11
+
+* Fixed bug Github29 (allowing for more complex nested operator queries)
+
 ### 1.0.10
 
 * Fixed bug Github27
