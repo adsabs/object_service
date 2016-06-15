@@ -1,3 +1,11 @@
+### 1.0.10
+
+* Fixed bug Github27
+
+### 1.0.9
+
+* Fixed bug Github24
+
 ### 1.0.8
 
 * deal with format of BBB requests in case of query input
