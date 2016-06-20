@@ -1,3 +1,4 @@
+import os
 # Configs specific to this ervice
 OBJECTS_SECRET_KEY = 'this should be changed'
 # URL to access the SIMBAB TAP interface
