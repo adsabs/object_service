@@ -1,3 +1,4 @@
+import os
 # Configs specific to this ervice
 OBJECTS_SECRET_KEY = 'this should be changed'
 # URL to access the SIMBAB TAP interface
@@ -8,6 +9,8 @@ OBJECTS_CACHE_TIMEOUT = 604800
 OBJECTS_DEFAULT_RADIUS = 0.1
 # Maximum number of records to return from cone search
 OBJECTS_SIMBAD_MAX_REC = 10000
+# In what environment are we?
+ENVIRONMENT = os.getenv('ENVIRONMENT', 'staging').lower()
 # Config for logging
 OBJECTS_LOGGING = {
     'version': 1,
@@ -24,7 +27,7 @@ OBJECTS_LOGGING = {
             'formatter': 'default',
             'level': 'INFO',
             'class': 'logging.handlers.TimedRotatingFileHandler',
-            'filename': '/tmp/object_service_app.log',
+            'filename': '/tmp/object_service.app.{}.log'.format(ENVIRONMENT),
         },
         'console': {
             'formatter': 'default',
