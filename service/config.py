@@ -1,3 +1,4 @@
+# necessary import
 import os
 # Configs specific to this ervice
 OBJECTS_SECRET_KEY = 'this should be changed'

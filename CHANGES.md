@@ -1,3 +1,7 @@
+### 1.0.13
+
+* small update
+
 ### 1.0.12
 
 * Update of logfile name, making use of ENVIRONMENT variable
