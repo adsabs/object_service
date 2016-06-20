@@ -1,3 +1,7 @@
+### 1.0.12
+
+* Update of logfile name, making use of ENVIRONMENT variable
+
 ### 1.0.11
 
 * Fixed bug Github29 (allowing for more complex nested operator queries)
