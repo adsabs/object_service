@@ -4,6 +4,8 @@ import os
 OBJECTS_SECRET_KEY = 'this should be changed'
 # URL to access the SIMBAB TAP interface
 OBJECTS_SIMBAD_TAP_URL = 'http://simbad.u-strasbg.fr/simbad/sim-tap/sync'
+# Time-out in seconds for SIMBAD TAP service requests
+OBJECTS_SIMBAD_TIMEOUT = 1
 # Cache time-out in seconds (one day = 86400, one week = 604800)
 OBJECTS_CACHE_TIMEOUT = 604800
 # Default radius for cone search

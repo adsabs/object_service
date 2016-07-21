@@ -1,6 +1,7 @@
 import re
 from flask import current_app
 import requests
+from requests.exceptions import ConnectTimeout
 import timeout_decorator
 from astropy import units as u
 from astropy.coordinates import SkyCoord
@@ -92,9 +93,16 @@ def get_simbad_data(id_list, input_type):
     else:
         return {"Error": "Unable to get results!", "Error Info": "Unknown input type specified!"}
     # Fire off the query
-    r = requests.post(QUERY_URL, data=params)
+    # Get timeout for request from the config (use 1 second if not found)
+    TIMEOUT = current_app.config.get('OBJECTS_SIMBAD_TIMEOUT',1)
+    try:
+        r = requests.post(QUERY_URL, data=params, timeout=TIMEOUT)
+    except ConnectTimeout:
+        current_app.logger.info('SIMBAD request timed out! Request took longer than %s second(s)'%TIMEOUT)
+        return {"Error": "Unable to get results!", "Error Info": "SIMBAD request timed out."}
     # Report if the SIMBAD server did not like our query
     if r.status_code != 200:
+        current_app.logger.info('SIMBAD request failed! Status code: %s'%r.status_code)
         return {"Error": "Unable to get results!", "Error Info": "SIMBAD returned status %s" % r.status_code}
     # Contruct the results
     # The "data" attribute of the JSON returned consists of tuples with the following entries

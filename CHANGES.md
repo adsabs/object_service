@@ -1,3 +1,7 @@
+### 1.0.14
+
+* timeout exception implemented for SIMBAD requests
+
 ### 1.0.13
 
 * small update
