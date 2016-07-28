@@ -107,6 +107,7 @@ class PositionSearch(Resource):
         # 3. 80.89416667 -69.75611111:0.166666
         stime = time.time()
         # If we're given a string with qualifiers ('h', etc), convert to one without
+        current_app.logger.info('Attempting SIMBAD position search: %s'%pstring)
         try:
             RA, DEC, radius = parse_position_string(pstring)
         except Exception, err:
@@ -150,6 +151,7 @@ class QuerySearch(Resource):
                 solr_query = ''
         else:
             solr_query = query
+        current_app.logger.info('Received SIMBAD object query: %s'%solr_query)
         new_query = solr_query.replace('object:','simbid:')
         # If we receive a (Solr) query string, we need to parse out the object names
         try:
