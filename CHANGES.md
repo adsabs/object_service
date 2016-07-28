@@ -1,3 +1,7 @@
+### 1.0.15
+
+* more detailed logging
+
 ### 1.0.14
 
 * timeout exception implemented for SIMBAD requests
