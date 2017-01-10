@@ -57,6 +57,8 @@ def parse_position_string(pstring):
 
 def get_simbad_data(id_list, input_type):
     QUERY_URL = current_app.config.get('OBJECTS_SIMBAD_TAP_URL')
+    current_app.logger.info('TAP service used to get SIMBAD data: %s'%QUERY_URL)
+
     params = {
         'request' : 'doQuery',
         'lang' : 'adql',
@@ -98,11 +100,11 @@ def get_simbad_data(id_list, input_type):
     try:
         r = requests.post(QUERY_URL, data=params, timeout=TIMEOUT)
     except ConnectTimeout:
-        current_app.logger.info('SIMBAD request timed out! Request took longer than %s second(s)'%TIMEOUT)
+        current_app.logger.info('SIMBAD request to %s timed out! Request took longer than %s second(s)'%(QUERY_URL, TIMEOUT))
         return {"Error": "Unable to get results!", "Error Info": "SIMBAD request timed out."}
     # Report if the SIMBAD server did not like our query
     if r.status_code != 200:
-        current_app.logger.info('SIMBAD request failed! Status code: %s'%r.status_code)
+        current_app.logger.info('SIMBAD request to %s failed! Status code: %s'%(QUERY_URL, r.status_code))
         return {"Error": "Unable to get results!", "Error Info": "SIMBAD returned status %s" % r.status_code}
     # Contruct the results
     # The "data" attribute of the JSON returned consists of tuples with the following entries
@@ -130,6 +132,7 @@ def get_simbad_data(id_list, input_type):
 @timeout_decorator.timeout(5)
 def do_position_query(RA, DEC, RADIUS):
     QUERY_URL = current_app.config.get('OBJECTS_SIMBAD_TAP_URL')
+    current_app.logger.info('TAP service used for position query: %s'%QUERY_URL)
     params = {
         'request' : 'doQuery',
         'lang' : 'adql',
@@ -145,7 +148,7 @@ def do_position_query(RA, DEC, RADIUS):
     try:
         r = requests.post(QUERY_URL, data=params)
     except Exception, err:
-        results = {'Error': 'Unable to get results!', 'Error Info': 'SIMBAD query blew up (%s)'%err}
+        results = {'Error': 'Unable to get results from %s!'%QUERY_URL, 'Error Info': 'SIMBAD query blew up (%s)'%err}
     try:
         bibcodes = list(set([d[0] for d in r.json()['data']]))
     except Exception, err:
