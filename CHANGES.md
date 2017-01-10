@@ -1,3 +1,7 @@
+### 1.0.16
+
+* logging of URL TAP service used
+
 ### 1.0.15
 
 * more detailed logging
