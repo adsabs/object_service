@@ -62,7 +62,8 @@ class ObjectSearch(Resource):
                 result = get_simbad_data(identifiers, input_type)
                 if 'Error' in result:
                     # An error was returned!
-                    current_app.logger.error('Failed to find data for SIMBAD %s query!'%input_type)
+                    err_msg = result['Error Info']
+                    current_app.logger.error('Failed to find data for SIMBAD %s query (%s)!'%(input_type,err_msg))
                     return result
                 else:
                     # We have results!
