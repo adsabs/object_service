@@ -1,7 +1,7 @@
 import re
 from flask import current_app
 import requests
-from requests.exceptions import ConnectTimeout
+from requests.exceptions import ConnectTimeout, ReadTimeout
 import timeout_decorator
 from astropy import units as u
 from astropy.coordinates import SkyCoord
@@ -99,9 +99,12 @@ def get_simbad_data(id_list, input_type):
     TIMEOUT = current_app.config.get('OBJECTS_SIMBAD_TIMEOUT',1)
     try:
         r = requests.post(QUERY_URL, data=params, timeout=TIMEOUT)
-    except ConnectTimeout:
+    except ConnectTimeout, ReadTimeout:
         current_app.logger.info('SIMBAD request to %s timed out! Request took longer than %s second(s)'%(QUERY_URL, TIMEOUT))
         return {"Error": "Unable to get results!", "Error Info": "SIMBAD request timed out."}
+    except Exception, err:
+        current_app.logger.error("SIMBAD request to %s failed (%s)"%(QUERY_URL, err)
+        return {"Error": "Unable to get results!", "Error Info": "SIMBAD request failed (not timeout)."}
     # Report if the SIMBAD server did not like our query
     if r.status_code != 200:
         current_app.logger.info('SIMBAD request to %s failed! Status code: %s'%(QUERY_URL, r.status_code))

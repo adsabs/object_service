@@ -1,3 +1,7 @@
+### 1.0.17
+
+* fix of Github issue 38: catch ReadTimeout exceptions
+
 ### 1.0.16
 
 * logging of URL TAP service used

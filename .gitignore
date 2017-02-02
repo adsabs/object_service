@@ -2,3 +2,5 @@
 local_config.py
 # Mac specific files
 .DS_Store
+# virtual environment
+venv
