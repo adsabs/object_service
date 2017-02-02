@@ -103,7 +103,7 @@ def get_simbad_data(id_list, input_type):
         current_app.logger.info('SIMBAD request to %s timed out! Request took longer than %s second(s)'%(QUERY_URL, TIMEOUT))
         return {"Error": "Unable to get results!", "Error Info": "SIMBAD request timed out."}
     except Exception, err:
-        current_app.logger.error("SIMBAD request to %s failed (%s)"%(QUERY_URL, err)
+        current_app.logger.error("SIMBAD request to %s failed (%s)"%(QUERY_URL, err))
         return {"Error": "Unable to get results!", "Error Info": "SIMBAD request failed (not timeout)."}
     # Report if the SIMBAD server did not like our query
     if r.status_code != 200:
