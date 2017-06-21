@@ -1,3 +1,7 @@
+### 1.0.18
+
+* Update requirements.txt (versioning) + cleanup
+
 ### 1.0.17
 
 * fix of Github issue 38: catch ReadTimeout exceptions

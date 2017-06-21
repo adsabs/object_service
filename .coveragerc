@@ -7,6 +7,7 @@ omit =
     */site-packages/nose/*
     */unittest2/*
     *service/tests/*
+    *service/service.py
     *migrations/*
 
 [report]
