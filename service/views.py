@@ -1,7 +1,7 @@
 from flask import current_app, request
-from flask.ext.restful import Resource
-from flask.ext.discoverer import advertise
-from flask.ext.cache import Cache
+from flask_restful import Resource
+from flask_discoverer import advertise
+from flask_cache import Cache
 from SIMBAD import get_simbad_data
 from SIMBAD import do_position_query
 from SIMBAD import parse_position_string
