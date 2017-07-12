@@ -1,3 +1,7 @@
+### 1.0.19
+
+* Implementation of data retrieval to support NED facet
+
 ### 1.0.18
 
 * Update requirements.txt (versioning) + cleanup

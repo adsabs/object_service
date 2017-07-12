@@ -1,4 +1,5 @@
 [run]
+source = service
 omit =
     */python?.?/*
     */lib-python/?.?/*.py
@@ -9,6 +10,7 @@ omit =
     *service/tests/*
     *service/service.py
     *migrations/*
+    *venv/*
 
 [report]
 exclude_lines =
