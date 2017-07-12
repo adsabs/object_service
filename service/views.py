@@ -5,6 +5,7 @@ from flask_cache import Cache
 from SIMBAD import get_simbad_data
 from SIMBAD import do_position_query
 from SIMBAD import parse_position_string
+from NED import get_ned_data
 from utils import get_objects_from_query_string
 import time
 import timeout_decorator
@@ -26,6 +27,11 @@ class ObjectSearch(Resource):
         objects = []
         facets = []
         input_type = None
+        # determine whether a source for the data was specified
+        try:
+            source = request.json['source'].lower()
+        except:
+            source = 'simbad'
         for itype in ['identifiers', 'objects', 'facets']:
             try:
                 identifiers = request.json[itype]
@@ -47,28 +53,28 @@ class ObjectSearch(Resource):
         if id_num == 0:
             return {"Error": "Unable to get results!",
                     "Error Info": "No identifiers/objects found in POST body"}, 200
-        # Source to query 
-        source = 'simbad'
         # Now check if we have anything cached for them
         cached = {id:current_app.cache.get(id.upper()) for id in identifiers if current_app.cache.get(id.upper())}
-        if source in ['simbad','all'] and len(identifiers) > 0:
+        if source in ['simbad','ned'] and len(identifiers) > 0:
              # If we have cached values, filter those out from the initial list
             if cached:
                 current_app.logger.debug('Received %s %s. Using %s entries from cache.' % (id_num, input_type, len(cached)))
                 identifiers = [id for id in identifiers if not current_app.cache.get(id.upper())]
             if identifiers:
-                ident_upper = [i.upper() for i in identifiers]
                 # We have identifiers, not found in the cache
-                result = get_simbad_data(identifiers, input_type)
+                if source == 'simbad':
+                    result = get_simbad_data(identifiers, input_type)
+                else:
+                    result = get_ned_data(identifiers, input_type)
                 if 'Error' in result:
                     # An error was returned!
                     err_msg = result['Error Info']
-                    current_app.logger.error('Failed to find data for SIMBAD %s query (%s)!'%(input_type,err_msg))
+                    current_app.logger.error('Failed to find data for %s %s query (%s)!'%(source.upper(), input_type,err_msg))
                     return result
                 else:
                     # We have results!
                     duration = time.time() - stime
-                    current_app.logger.info('Found objects for SIMBAD %s in %s user seconds.' % (input_type, duration))
+                    current_app.logger.info('Found objects for %s %s in %s user seconds.' % (source.upper(), input_type, duration))
                     # Before returning results, cache them
                     for ident, value in result['data'].items():
                         current_app.cache.set(ident.upper(), value, timeout=current_app.config.get('OBJECTS_CACHE_TIMEOUT'))
@@ -90,7 +96,7 @@ class ObjectSearch(Resource):
                 # This should never happen
                 current_app.logger.error('No data found, even though we had %s! Should never happen!'%input_type)
                 result = {
-                    "Error": "Failed to find data for SIMBAD %s query!"%input_type,
+                    "Error": "Failed to find data for %s %s query!"%(source.upper(), input_type),
                     "Error Info": "No results found, where results were expected! Needs attention!"
                     }
                 return result

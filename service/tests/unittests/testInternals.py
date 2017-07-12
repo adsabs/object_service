@@ -28,7 +28,9 @@ class TestConfig(TestCase):
         required = ["OBJECTS_SIMBAD_TAP_URL",
                     "OBJECTS_CACHE_TIMEOUT",
                     "OBJECTS_DEFAULT_RADIUS",
-                    "OBJECTS_SIMBAD_MAX_REC"]
+                    "OBJECTS_SIMBAD_MAX_REC",
+                    "OBJECTS_NED_URL",
+                    ]
         missing = [x for x in required if x not in self.app.config.keys()]
         self.assertTrue(len(missing) == 0)
         # Check if API has an actual value
@@ -76,6 +78,182 @@ class TestDataRetrieval(TestCase):
         result = get_simbad_data(identifiers, 'identifiers')
         expected = {'data': {u'3133169': {'id': '3133169', 'canonical': u'LMC'}, u'1575544': {'id': '1575544', 'canonical': u'ANDROMEDA'}}}
         self.assertEqual(result, expected)
+
+    @httpretty.activate
+    def test_get_ned_objects(self):
+        '''Test to see if retrieval of NED objects method behaves as expected'''
+        from NED import get_ned_data
+        identifiers = ["LMC"]
+        mockdata = {u'NameResolver': u'NED-Egret', u'Copyright': u'(C) 2017 California Institute of Technology', 
+                    u'Preferred': {u'Name': u'Large Magellanic Cloud'}, 
+                    u'ResultCode': 3, u'StatusCode': 100}
+        QUERY_URL = self.app.config.get('OBJECTS_NED_URL')
+        httpretty.register_uri(
+            httpretty.POST, QUERY_URL,
+            content_type='application/json',
+            status=200,
+            body='%s'%json.dumps(mockdata))
+        result = get_ned_data(identifiers, 'identifiers')
+        expected = {'data': {u'LMC': {'id': 'LMC', 'canonical': u'Large Magellanic Cloud'}}}
+        self.assertEqual(result, expected)
+
+    @httpretty.activate
+    def test_get_ned_objects_unknown_object(self):
+        '''Test to see if retrieval of NED objects method behaves as expected'''
+        from NED import get_ned_data
+        identifiers = ["LMC"]
+        mockdata = {u'NameResolver': u'NED-Egret', u'Copyright': u'(C) 2017 California Institute of Technology',
+                    u'Preferred': {u'Name': u'Large Magellanic Cloud'},
+                    u'ResultCode': 0, u'StatusCode': 100}
+        QUERY_URL = self.app.config.get('OBJECTS_NED_URL')
+        httpretty.register_uri(
+            httpretty.POST, QUERY_URL,
+            content_type='application/json',
+            status=200,
+            body='%s'%json.dumps(mockdata))
+        result = get_ned_data(identifiers, 'identifiers')
+        expected = {'Error': 'Unable to get results!','Error Info': "No results were found for NED identifiers: ['LMC']"}
+        self.assertEqual(result, expected)
+
+    @httpretty.activate
+    def test_get_ned_objects_unsuccessful(self):
+        '''Test to see if retrieval of NED objects method behaves as expected'''
+        from NED import get_ned_data
+        identifiers = ["LMC"]
+        mockdata = {u'NameResolver': u'NED-Egret', u'Copyright': u'(C) 2017 California Institute of Technology',
+                    u'Preferred': {u'Name': u'Large Magellanic Cloud'},
+                    u'ResultCode': 0, u'StatusCode': 300}
+        QUERY_URL = self.app.config.get('OBJECTS_NED_URL')
+        httpretty.register_uri(
+            httpretty.POST, QUERY_URL,
+            content_type='application/json',
+            status=200,
+            body='%s'%json.dumps(mockdata))
+        result = get_ned_data(identifiers, 'identifiers')
+        expected = {'Error': 'Unable to get results!','Error Info': "No results were found for NED identifiers: ['LMC']"}
+        self.assertEqual(result, expected)
+
+    @httpretty.activate
+    def test_get_ned_objects_unexpected_resultcode(self):
+        '''Test to see if retrieval of NED objects method behaves as expected'''
+        from NED import get_ned_data
+        identifiers = ["LMC"]
+        mockdata = {u'NameResolver': u'NED-Egret', u'Copyright': u'(C) 2017 California Institute of Technology',
+                    u'Preferred': {u'Name': u'Large Magellanic Cloud'},
+                    u'ResultCode': 10, u'StatusCode': 100}
+        QUERY_URL = self.app.config.get('OBJECTS_NED_URL')
+        httpretty.register_uri(
+            httpretty.POST, QUERY_URL,
+            content_type='application/json',
+            status=200,
+            body='%s'%json.dumps(mockdata))
+        result = get_ned_data(identifiers, 'identifiers')
+        expected = {'Error': 'Unable to get results!','Error Info': "No results were found for NED identifiers: ['LMC']"}
+        self.assertEqual(result, expected)
+
+    @httpretty.activate
+    def test_get_ned_objects_service_error(self):
+        '''Test to see if retrieval of NED objects method behaves as expected'''
+        from NED import get_ned_data
+        identifiers = ["LMC"]
+        mockdata = {u'NameResolver': u'NED-Egret', u'Copyright': u'(C) 2017 California Institute of Technology',
+                    u'Preferred': {u'Name': u'Large Magellanic Cloud'},
+                    u'ResultCode': 10, u'StatusCode': 100}
+        QUERY_URL = self.app.config.get('OBJECTS_NED_URL')
+        httpretty.register_uri(
+            httpretty.POST, QUERY_URL,
+            content_type='application/json',
+            status=500,
+            body='%s'%json.dumps(mockdata))
+        result = get_ned_data(identifiers, 'identifiers')
+        expected = {'Error': 'Unable to get results!','Error Info': "No results were found for NED identifiers: ['LMC']"}
+        self.assertEqual(result, expected)
+
+    @httpretty.activate
+    def test_do_ned_query(self):
+        '''Test to see if single NED object lookup behaves'''
+        from NED import do_ned_object_lookup
+        identifier = "LMC"
+        mockdata = {u'NameResolver': u'NED-Egret', u'Copyright': u'(C) 2017 California Institute of Technology',
+                    u'Preferred': {u'Name': u'Large Magellanic Cloud'},
+                    u'ResultCode': 3, u'StatusCode': 100}
+        QUERY_URL = self.app.config.get('OBJECTS_NED_URL')
+        httpretty.register_uri(
+            httpretty.POST, QUERY_URL,
+            content_type='application/json',
+            status=500,
+            body='%s'%json.dumps(mockdata))
+        result = do_ned_object_lookup(QUERY_URL, identifier)
+        expected = {"Error": "Unable to get results!", "Error Info": "NED returned status 500"}
+        self.assertEqual(result, expected)
+
+    @httpretty.activate
+    def test_do_ned_query_readtimeout(self):
+        '''Test to see if single NED throws proper exception at timeout'''
+        from NED import do_ned_object_lookup
+        from time import sleep
+
+        def exceptionCallback(request, uri, headers):
+            mockdata = {u'NameResolver': u'NED-Egret', u'Copyright': u'(C) 2017 California Institute of Technology',
+                    u'Preferred': {u'Name': u'Large Magellanic Cloud'},
+                    u'ResultCode': 3, u'StatusCode': 100}
+            sleep(2)
+            return 200, headers, json.dumps(mockdata)
+
+        self.app.config['OBJECTS_NED_TIMEOUT'] = 1
+        QUERY_URL = "http://aaaa.org"
+        httpretty.register_uri(
+            httpretty.POST, QUERY_URL,
+            body=exceptionCallback)
+        result = do_ned_object_lookup(QUERY_URL, "bar")
+
+        expected = {'Error': 'Unable to get results!', 'Error Info': "NED request failed (HTTPConnectionPool(host='aaaa.org', port=80): Read timed out. (read timeout={0}))".format(self.app.config['OBJECTS_NED_TIMEOUT'])}
+        self.assertEqual(result, expected)
+
+    @httpretty.activate
+    def test_get_simbad_objects_timeout(self):
+        '''Test to see if retrieval of SIMBAD objects method behaves as expected'''
+        from SIMBAD import get_simbad_data
+        from time import sleep
+
+        def exceptionCallback(request, uri, headers):
+            mockdata = {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"]]}
+            sleep(2)
+            return 200, headers, json.dumps(mockdata)
+
+        identifiers = ["3133169", "1575544"]
+        self.app.config['OBJECTS_SIMBAD_TIMEOUT'] = 1
+        QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
+        httpretty.register_uri(
+            httpretty.POST, QUERY_URL,
+            body=exceptionCallback)
+        result = get_simbad_data(identifiers, 'identifiers')
+        expected = {'Error': 'Unable to get results!', 'Error Info': "NED request failed (HTTPConnectionPool(host='aaaa.org', port=80): Read timed out. (read timeout={0}))".format(self.app.config['OBJECTS_NED_TIMEOUT'])}
+        expected = {"Error": "Unable to get results!", "Error Info": "SIMBAD request failed (not timeout)."}
+        self.assertEqual(result, expected)
+
+#    def test_do_simbad_query_readtimeout(self):
+#        '''Test to see if SIMBAD throws proper exception at timeout'''
+#        from NED import do_ned_object_lookup
+#        from time import sleep
+#
+#        def exceptionCallback(request, uri, headers):
+#            mockdata = {u'NameResolver': u'NED-Egret', u'Copyright': u'(C) 2017 California Institute of Technology',
+#                    u'Preferred': {u'Name': u'Large Magellanic Cloud'},
+#                    u'ResultCode': 3, u'StatusCode': 100}
+#            sleep(2)
+#            return 200, headers, json.dumps(mockdata)
+#
+#        self.app.config['OBJECTS_NED_TIMEOUT'] = 1
+#        QUERY_URL = "http://aaaa.org"
+#        httpretty.register_uri(
+#            httpretty.POST, QUERY_URL,
+#            body=exceptionCallback)
+#        result = do_ned_object_lookup(QUERY_URL, "bar")
+#
+#        expected = {'Error': 'Unable to get results!', 'Error Info': 'NED connection error.'}
+#        expected = {'Error': 'Unable to get results!', 'Error Info': "NED request failed (HTTPConnectionPool(host='aaaa.org', port=80): Read timed out. (read timeout={0}))".format(self.app.config['OBJECTS_NED_TIMEOUT'])}
+#        self.assertEqual(result, expected)
 
     @httpretty.activate
     def test_do_cone_search(self):

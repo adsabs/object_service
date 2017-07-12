@@ -4,8 +4,12 @@ import os
 OBJECTS_SECRET_KEY = 'this should be changed'
 # URL to access the SIMBAB TAP interface
 OBJECTS_SIMBAD_TAP_URL = 'http://simbad.u-strasbg.fr/simbad/sim-tap/sync'
+# URL to access the NED interface
+OBJECTS_NED_URL = 'http://ned.ipac.caltech.edu/srs/ObjectLookup'
 # Time-out in seconds for SIMBAD TAP service requests
 OBJECTS_SIMBAD_TIMEOUT = 4
+# Time-out in seconds for NED service requests
+OBJECTS_NED_TIMEOUT = 4
 # Cache time-out in seconds (one day = 86400, one week = 604800)
 OBJECTS_CACHE_TIMEOUT = 604800
 # Default radius for cone search

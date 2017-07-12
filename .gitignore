@@ -1,6 +1,7 @@
 *.py[co]
 local_config.py
 .coverage
+.cache
 # Mac specific files
 .DS_Store
 # virtual environment
