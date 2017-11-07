@@ -205,7 +205,7 @@ class TestDataRetrieval(TestCase):
         result = do_ned_object_lookup(QUERY_URL, "bar")
 
         expected = {'Error': 'Unable to get results!', 'Error Info': "NED request failed (HTTPConnectionPool(host='aaaa.org', port=80): Read timed out. (read timeout={0}))".format(self.app.config['OBJECTS_NED_TIMEOUT'])}
-        self.assertEqual(result, expected)
+        self.assertDictEqual(result, expected)
 
     @httpretty.activate
     def test_get_simbad_objects_timeout(self):
@@ -227,7 +227,7 @@ class TestDataRetrieval(TestCase):
         result = get_simbad_data(identifiers, 'identifiers')
         expected = {'Error': 'Unable to get results!', 'Error Info': "NED request failed (HTTPConnectionPool(host='aaaa.org', port=80): Read timed out. (read timeout={0}))".format(self.app.config['OBJECTS_NED_TIMEOUT'])}
         expected = {"Error": "Unable to get results!", "Error Info": "SIMBAD request failed (not timeout)."}
-        self.assertEqual(result, expected)
+        self.assertDictEqual(result, expected)
 
 #    def test_do_simbad_query_readtimeout(self):
 #        '''Test to see if SIMBAD throws proper exception at timeout'''
