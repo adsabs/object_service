@@ -17,10 +17,12 @@ def do_ned_object_lookup(url, oname):
     TIMEOUT = current_app.config.get('OBJECTS_NED_TIMEOUT',1)
     try:
         r = requests.post(url, data=json.dumps(payload), headers=headers, timeout=TIMEOUT)
-    except ConnectTimeout, ReadTimeout:
+    except (ConnectTimeout, ReadTimeout) as err:
+        print "XXXXXXXX"
         current_app.logger.info('NED request to %s timed out! Request took longer than %s second(s)'%(url, TIMEOUT))
-        return {"Error": "Unable to get results!", "Error Info": "NED request timed out."}
+        return {"Error": "Unable to get results!", "Error Info": "NED request timed out: {0}".format(str(err))}
     except Exception, err:
+        print "YYYYYYY"
         current_app.logger.error("NED request to %s failed (%s)"%(url, err))
         return {"Error": "Unable to get results!", "Error Info": "NED request failed ({0})".format(err)}
     # Check if we got a 200 status code back

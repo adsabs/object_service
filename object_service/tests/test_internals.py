@@ -5,6 +5,7 @@ from flask import request
 from flask import url_for, Flask
 import unittest
 import requests
+from requests.exceptions import ReadTimeout
 import time
 from object_service import app
 import json
@@ -191,20 +192,15 @@ class TestDataRetrieval(TestCase):
         from time import sleep
 
         def exceptionCallback(request, uri, headers):
-            mockdata = {u'NameResolver': u'NED-Egret', u'Copyright': u'(C) 2017 California Institute of Technology',
-                    u'Preferred': {u'Name': u'Large Magellanic Cloud'},
-                    u'ResultCode': 3, u'StatusCode': 100}
-            sleep(2)
-            return 200, headers, json.dumps(mockdata)
+            raise ReadTimeout('Connection timed out.')
 
-        self.app.config['OBJECTS_NED_TIMEOUT'] = 1
+        self.app.config['OBJECTS_NED_TIMEOUT'] = 0.1
         QUERY_URL = "http://aaaa.org"
         httpretty.register_uri(
             httpretty.POST, QUERY_URL,
             body=exceptionCallback)
         result = do_ned_object_lookup(QUERY_URL, "bar")
-
-        expected = {'Error': 'Unable to get results!', 'Error Info': "NED request failed (HTTPConnectionPool(host='aaaa.org', port=80): Read timed out. (read timeout={0}))".format(self.app.config['OBJECTS_NED_TIMEOUT'])}
+        expected = {'Error': 'Unable to get results!', 'Error Info': 'NED request timed out: Connection timed out.'}
         self.assertDictEqual(result, expected)
 
     @httpretty.activate
@@ -214,9 +210,7 @@ class TestDataRetrieval(TestCase):
         from time import sleep
 
         def exceptionCallback(request, uri, headers):
-            mockdata = {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"]]}
-            sleep(2)
-            return 200, headers, json.dumps(mockdata)
+            raise ReadTimeout('Connection timed out.')
 
         identifiers = ["3133169", "1575544"]
         self.app.config['OBJECTS_SIMBAD_TIMEOUT'] = 1
@@ -225,32 +219,8 @@ class TestDataRetrieval(TestCase):
             httpretty.POST, QUERY_URL,
             body=exceptionCallback)
         result = get_simbad_data(identifiers, 'identifiers')
-        expected = {'Error': 'Unable to get results!', 'Error Info': "NED request failed (HTTPConnectionPool(host='aaaa.org', port=80): Read timed out. (read timeout={0}))".format(self.app.config['OBJECTS_NED_TIMEOUT'])}
-        expected = {"Error": "Unable to get results!", "Error Info": "SIMBAD request failed (not timeout)."}
+        expected = {'Error': 'Unable to get results!', 'Error Info': 'SIMBAD request timed out: Connection timed out.'}
         self.assertDictEqual(result, expected)
-
-#    def test_do_simbad_query_readtimeout(self):
-#        '''Test to see if SIMBAD throws proper exception at timeout'''
-#        from NED import do_ned_object_lookup
-#        from time import sleep
-#
-#        def exceptionCallback(request, uri, headers):
-#            mockdata = {u'NameResolver': u'NED-Egret', u'Copyright': u'(C) 2017 California Institute of Technology',
-#                    u'Preferred': {u'Name': u'Large Magellanic Cloud'},
-#                    u'ResultCode': 3, u'StatusCode': 100}
-#            sleep(2)
-#            return 200, headers, json.dumps(mockdata)
-#
-#        self.app.config['OBJECTS_NED_TIMEOUT'] = 1
-#        QUERY_URL = "http://aaaa.org"
-#        httpretty.register_uri(
-#            httpretty.POST, QUERY_URL,
-#            body=exceptionCallback)
-#        result = do_ned_object_lookup(QUERY_URL, "bar")
-#
-#        expected = {'Error': 'Unable to get results!', 'Error Info': 'NED connection error.'}
-#        expected = {'Error': 'Unable to get results!', 'Error Info': "NED request failed (HTTPConnectionPool(host='aaaa.org', port=80): Read timed out. (read timeout={0}))".format(self.app.config['OBJECTS_NED_TIMEOUT'])}
-#        self.assertEqual(result, expected)
 
     @httpretty.activate
     def test_do_cone_search(self):
