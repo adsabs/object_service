@@ -1,15 +1,12 @@
 import sys
 import os
-PROJECT_HOME = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '../../'))
-sys.path.append(PROJECT_HOME)
 from flask_testing import TestCase
 from flask import request
 from flask import url_for, Flask
 import unittest
 import requests
 import time
-import app
+from object_service import app
 import json
 import httpretty
 
@@ -219,3 +216,6 @@ class TestExpectedResults(TestCase):
         # See if we received the expected results
         expected = {"query": "bibstem:A&A simbid:1575544 year:2015"}
         self.assertEqual(r.json, expected)
+
+if __name__ == '__main__':
+    unittest.main()
