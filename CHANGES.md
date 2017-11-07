@@ -1,3 +1,11 @@
+### 1.0.20
+
+* Unittesting using py.test
+* Renamed app directory from 'service' to 'object_service'
+* Separate dev-requirements.txt
+* Removed unused client.py
+* Code cleanup
+
 ### 1.0.19
 
 * Implementation of data retrieval to support NED facet

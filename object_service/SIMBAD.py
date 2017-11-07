@@ -99,9 +99,9 @@ def get_simbad_data(id_list, input_type):
     TIMEOUT = current_app.config.get('OBJECTS_SIMBAD_TIMEOUT',1)
     try:
         r = requests.post(QUERY_URL, data=params, timeout=TIMEOUT)
-    except ConnectTimeout, ReadTimeout:
+    except (ConnectTimeout, ReadTimeout) as err:
         current_app.logger.info('SIMBAD request to %s timed out! Request took longer than %s second(s)'%(QUERY_URL, TIMEOUT))
-        return {"Error": "Unable to get results!", "Error Info": "SIMBAD request timed out."}
+        return {"Error": "Unable to get results!", "Error Info": "SIMBAD request timed out: {0}".format(err)}
     except Exception, err:
         current_app.logger.error("SIMBAD request to %s failed (%s)"%(QUERY_URL, err))
         return {"Error": "Unable to get results!", "Error Info": "SIMBAD request failed (not timeout)."}

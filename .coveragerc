@@ -1,22 +1,4 @@
+
 [run]
-source = service
-omit =
-    */python?.?/*
-    */lib-python/?.?/*.py
-    */lib_pypy/_*.py
-    */site-packages/ordereddict.py
-    */site-packages/nose/*
-    */unittest2/*
-    *service/tests/*
-    *service/service.py
-    *migrations/*
-    *venv/*
-
-[report]
-exclude_lines =
-    # Have to re-enable the standard pragma
-    pragma: no cover
-
-    # Don't complain if non-runnable code isn't run:
-    if 0:
-    if __name__ == .__main__.:
+source = object_service
+omit = object_service/tests*

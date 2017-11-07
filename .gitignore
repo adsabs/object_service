@@ -4,5 +4,6 @@ local_config.py
 .cache
 # Mac specific files
 .DS_Store
+._*
 # virtual environment
 venv

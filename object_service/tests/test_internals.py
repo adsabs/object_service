@@ -1,15 +1,13 @@
 import sys
 import os
-PROJECT_HOME = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '../../'))
-sys.path.append(PROJECT_HOME)
 from flask_testing import TestCase
 from flask import request
 from flask import url_for, Flask
 import unittest
 import requests
+from requests.exceptions import ReadTimeout
 import time
-import app
+from object_service import app
 import json
 import httpretty
 import timeout_decorator
@@ -34,9 +32,9 @@ class TestConfig(TestCase):
         missing = [x for x in required if x not in self.app.config.keys()]
         self.assertTrue(len(missing) == 0)
         # Check if API has an actual value
-        if os.path.exists("%s/local_config.py" % PROJECT_HOME):
-            self.assertTrue(
-                self.app.config.get('OBJECTS_API_TOKEN', None) != None)
+        #if os.path.exists("%s/local_config.py" % PROJECT_HOME):
+        #    self.assertTrue(
+        #        self.app.config.get('OBJECTS_API_TOKEN', None) != None)
 
 class TestDataRetrieval(TestCase):
 
@@ -50,7 +48,7 @@ class TestDataRetrieval(TestCase):
     @httpretty.activate
     def test_get_simbad_identifiers(self):
         '''Test to see if retrieval of SIMBAD identifiers method behaves as expected'''
-        from SIMBAD import get_simbad_data
+        from object_service.SIMBAD import get_simbad_data
         objects = ['Andromeda','LMC']
         mockdata = {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"]]}
         QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
@@ -66,7 +64,7 @@ class TestDataRetrieval(TestCase):
     @httpretty.activate
     def test_get_simbad_objects(self):
         '''Test to see if retrieval of SIMBAD objects method behaves as expected'''
-        from SIMBAD import get_simbad_data
+        from object_service.SIMBAD import get_simbad_data
         identifiers = ["3133169", "1575544"]
         mockdata = {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"]]}
         QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
@@ -82,7 +80,7 @@ class TestDataRetrieval(TestCase):
     @httpretty.activate
     def test_get_ned_objects(self):
         '''Test to see if retrieval of NED objects method behaves as expected'''
-        from NED import get_ned_data
+        from object_service.NED import get_ned_data
         identifiers = ["LMC"]
         mockdata = {u'NameResolver': u'NED-Egret', u'Copyright': u'(C) 2017 California Institute of Technology', 
                     u'Preferred': {u'Name': u'Large Magellanic Cloud'}, 
@@ -100,7 +98,7 @@ class TestDataRetrieval(TestCase):
     @httpretty.activate
     def test_get_ned_objects_unknown_object(self):
         '''Test to see if retrieval of NED objects method behaves as expected'''
-        from NED import get_ned_data
+        from object_service.NED import get_ned_data
         identifiers = ["LMC"]
         mockdata = {u'NameResolver': u'NED-Egret', u'Copyright': u'(C) 2017 California Institute of Technology',
                     u'Preferred': {u'Name': u'Large Magellanic Cloud'},
@@ -118,7 +116,7 @@ class TestDataRetrieval(TestCase):
     @httpretty.activate
     def test_get_ned_objects_unsuccessful(self):
         '''Test to see if retrieval of NED objects method behaves as expected'''
-        from NED import get_ned_data
+        from object_service.NED import get_ned_data
         identifiers = ["LMC"]
         mockdata = {u'NameResolver': u'NED-Egret', u'Copyright': u'(C) 2017 California Institute of Technology',
                     u'Preferred': {u'Name': u'Large Magellanic Cloud'},
@@ -136,7 +134,7 @@ class TestDataRetrieval(TestCase):
     @httpretty.activate
     def test_get_ned_objects_unexpected_resultcode(self):
         '''Test to see if retrieval of NED objects method behaves as expected'''
-        from NED import get_ned_data
+        from object_service.NED import get_ned_data
         identifiers = ["LMC"]
         mockdata = {u'NameResolver': u'NED-Egret', u'Copyright': u'(C) 2017 California Institute of Technology',
                     u'Preferred': {u'Name': u'Large Magellanic Cloud'},
@@ -154,7 +152,7 @@ class TestDataRetrieval(TestCase):
     @httpretty.activate
     def test_get_ned_objects_service_error(self):
         '''Test to see if retrieval of NED objects method behaves as expected'''
-        from NED import get_ned_data
+        from object_service.NED import get_ned_data
         identifiers = ["LMC"]
         mockdata = {u'NameResolver': u'NED-Egret', u'Copyright': u'(C) 2017 California Institute of Technology',
                     u'Preferred': {u'Name': u'Large Magellanic Cloud'},
@@ -172,7 +170,7 @@ class TestDataRetrieval(TestCase):
     @httpretty.activate
     def test_do_ned_query(self):
         '''Test to see if single NED object lookup behaves'''
-        from NED import do_ned_object_lookup
+        from object_service.NED import do_ned_object_lookup
         identifier = "LMC"
         mockdata = {u'NameResolver': u'NED-Egret', u'Copyright': u'(C) 2017 California Institute of Technology',
                     u'Preferred': {u'Name': u'Large Magellanic Cloud'},
@@ -190,36 +188,29 @@ class TestDataRetrieval(TestCase):
     @httpretty.activate
     def test_do_ned_query_readtimeout(self):
         '''Test to see if single NED throws proper exception at timeout'''
-        from NED import do_ned_object_lookup
+        from object_service.NED import do_ned_object_lookup
         from time import sleep
 
         def exceptionCallback(request, uri, headers):
-            mockdata = {u'NameResolver': u'NED-Egret', u'Copyright': u'(C) 2017 California Institute of Technology',
-                    u'Preferred': {u'Name': u'Large Magellanic Cloud'},
-                    u'ResultCode': 3, u'StatusCode': 100}
-            sleep(2)
-            return 200, headers, json.dumps(mockdata)
+            raise ReadTimeout('Connection timed out.')
 
-        self.app.config['OBJECTS_NED_TIMEOUT'] = 1
+        self.app.config['OBJECTS_NED_TIMEOUT'] = 0.1
         QUERY_URL = "http://aaaa.org"
         httpretty.register_uri(
             httpretty.POST, QUERY_URL,
             body=exceptionCallback)
         result = do_ned_object_lookup(QUERY_URL, "bar")
-
-        expected = {'Error': 'Unable to get results!', 'Error Info': "NED request failed (HTTPConnectionPool(host='aaaa.org', port=80): Read timed out. (read timeout={0}))".format(self.app.config['OBJECTS_NED_TIMEOUT'])}
-        self.assertEqual(result, expected)
+        expected = {'Error': 'Unable to get results!', 'Error Info': 'NED request timed out: Connection timed out.'}
+        self.assertDictEqual(result, expected)
 
     @httpretty.activate
     def test_get_simbad_objects_timeout(self):
         '''Test to see if retrieval of SIMBAD objects method behaves as expected'''
-        from SIMBAD import get_simbad_data
+        from object_service.SIMBAD import get_simbad_data
         from time import sleep
 
         def exceptionCallback(request, uri, headers):
-            mockdata = {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"]]}
-            sleep(2)
-            return 200, headers, json.dumps(mockdata)
+            raise ReadTimeout('Connection timed out.')
 
         identifiers = ["3133169", "1575544"]
         self.app.config['OBJECTS_SIMBAD_TIMEOUT'] = 1
@@ -228,38 +219,14 @@ class TestDataRetrieval(TestCase):
             httpretty.POST, QUERY_URL,
             body=exceptionCallback)
         result = get_simbad_data(identifiers, 'identifiers')
-        expected = {'Error': 'Unable to get results!', 'Error Info': "NED request failed (HTTPConnectionPool(host='aaaa.org', port=80): Read timed out. (read timeout={0}))".format(self.app.config['OBJECTS_NED_TIMEOUT'])}
-        expected = {"Error": "Unable to get results!", "Error Info": "SIMBAD request failed (not timeout)."}
-        self.assertEqual(result, expected)
-
-#    def test_do_simbad_query_readtimeout(self):
-#        '''Test to see if SIMBAD throws proper exception at timeout'''
-#        from NED import do_ned_object_lookup
-#        from time import sleep
-#
-#        def exceptionCallback(request, uri, headers):
-#            mockdata = {u'NameResolver': u'NED-Egret', u'Copyright': u'(C) 2017 California Institute of Technology',
-#                    u'Preferred': {u'Name': u'Large Magellanic Cloud'},
-#                    u'ResultCode': 3, u'StatusCode': 100}
-#            sleep(2)
-#            return 200, headers, json.dumps(mockdata)
-#
-#        self.app.config['OBJECTS_NED_TIMEOUT'] = 1
-#        QUERY_URL = "http://aaaa.org"
-#        httpretty.register_uri(
-#            httpretty.POST, QUERY_URL,
-#            body=exceptionCallback)
-#        result = do_ned_object_lookup(QUERY_URL, "bar")
-#
-#        expected = {'Error': 'Unable to get results!', 'Error Info': 'NED connection error.'}
-#        expected = {'Error': 'Unable to get results!', 'Error Info': "NED request failed (HTTPConnectionPool(host='aaaa.org', port=80): Read timed out. (read timeout={0}))".format(self.app.config['OBJECTS_NED_TIMEOUT'])}
-#        self.assertEqual(result, expected)
+        expected = {'Error': 'Unable to get results!', 'Error Info': 'SIMBAD request timed out: Connection timed out.'}
+        self.assertDictEqual(result, expected)
 
     @httpretty.activate
     def test_do_cone_search(self):
         '''Test to see if SIMBAD cone search method behaves as expected'''
-        from SIMBAD import parse_position_string
-        from SIMBAD import do_position_query
+        from object_service.SIMBAD import parse_position_string
+        from object_service.SIMBAD import do_position_query
         pstring = "80.89416667 -69.75611111:0.166666"
         mockdata = {"data":[["2003A&A...405..111G"],["2011AcA....61..103G"]]}
         QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
@@ -314,7 +281,7 @@ class TestQueryStringParsing(TestCase):
 
     def test_query_parsing(self):
         '''Test parsing of query strings'''
-        from utils import get_objects_from_query_string as parse
+        from object_service.utils import get_objects_from_query_string as parse
         test_cases = {
             'object:Bla':['Bla'],
             'object:"Small Magellanic Cloud"':['Small Magellanic Cloud'],
@@ -333,3 +300,6 @@ class TestQueryStringParsing(TestCase):
 
         for qstring, expected in test_cases.items():
             self.assertEqual(parse(qstring), expected)
+
+if __name__ == '__main__':
+    unittest.main()

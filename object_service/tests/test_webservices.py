@@ -1,14 +1,11 @@
 import sys
 import os
-PROJECT_HOME = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '../../'))
-#sys.path.append(PROJECT_HOME)
 from flask_testing import TestCase
 from flask import url_for, Flask
 import unittest
 import requests
 import time
-import app
+from object_service import app
 
 
 class TestWebservices(TestCase):
