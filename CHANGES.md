@@ -1,3 +1,7 @@
+### 1.0.21
+
+* App instantiation through ADSFlask (ADSMicroserviceUtils)
+
 ### 1.0.20
 
 * Unittesting using py.test

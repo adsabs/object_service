@@ -1,11 +1,12 @@
-import os
-from flask import Flask
 from views import ObjectSearch, PositionSearch, QuerySearch
 from flask_restful import Api
 from flask_discoverer import Discoverer
 from flask_cache import Cache
-import logging.config
-
+from adsmutils import ADSFlask
+# FIXME: temporary imports till mutils has been fixed
+import os
+import inspect
+import object_service
 
 def create_app():
     """
@@ -13,14 +14,11 @@ def create_app():
     :return: flask.Flask application
     """
 
-    app = Flask(__name__, static_folder=None)
+    # FIXME: setting proj_home here is temporary till adsmutils has been fixed
+    proj_home = os.path.dirname(inspect.getsourcefile(object_service))
+    # after the fix: app = ADSFlask(__name__, static_folder=None)
+    app = ADSFlask(__name__, static_folder=None, proj_home=proj_home)
     app.url_map.strict_slashes = False
-
-    load_config(app)
-
-    logging.config.dictConfig(
-        app.config['OBJECTS_LOGGING']
-    )
 
     app.cache = Cache(app) 
 
@@ -32,23 +30,6 @@ def create_app():
     discoverer = Discoverer(app)
 
     return app
-
-
-def load_config(app):
-    """
-    Loads configuration in the following order:
-        1. config.py
-        2. local_config.py (ignore failures)
-    :param app: flask.Flask application instance
-    :return: None
-    """
-
-    app.config.from_pyfile('config.py')
-
-    try:
-        app.config.from_pyfile('local_config.py')
-    except IOError:
-        app.logger.warning("Could not load local_config.py")
 
 if __name__ == "__main__":
     app = create_app()
