@@ -1,3 +1,7 @@
+### 1.0.22
+
+* Undo the replacement of spaces with underscores in identifiers
+
 ### 1.0.21
 
 * App instantiation through ADSFlask (ADSMicroserviceUtils)
