@@ -46,7 +46,8 @@ def get_ned_data(id_list, input_type):
     # Establish the NED query, based on the type of input
     if input_type == 'identifiers':
         for ident in id_list:
-            odata = do_ned_object_lookup(QUERY_URL, ident)
+            # Since all spaces in the identifiers where replaced by underscores, we have to undo this
+            odata = do_ned_object_lookup(QUERY_URL, ident.replace('_',' '))
             if "Error" in odata:
                 # NED query failed, no need to proceed with this identifier
                 continue
