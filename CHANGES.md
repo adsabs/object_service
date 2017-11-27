@@ -1,3 +1,7 @@
+### 1.0.22
+
+* Waffle badge
+
 ### 1.0.21
 
 * App instantiation through ADSFlask (ADSMicroserviceUtils)
