@@ -1,3 +1,7 @@
+### 1.0.24
+
+* More code cleanup
+
 ### 1.0.23
 
 * Code cleanup and waffle implementation

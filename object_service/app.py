@@ -3,10 +3,6 @@ from flask_restful import Api
 from flask_discoverer import Discoverer
 from flask_cache import Cache
 from adsmutils import ADSFlask
-# FIXME: temporary imports till mutils has been fixed
-import os
-import inspect
-import object_service
 
 def create_app():
     """
@@ -14,10 +10,7 @@ def create_app():
     :return: flask.Flask application
     """
 
-    # FIXME: setting proj_home here is temporary till adsmutils has been fixed
-    proj_home = os.path.dirname(inspect.getsourcefile(object_service))
-    # after the fix: app = ADSFlask(__name__, static_folder=None)
-    app = ADSFlask(__name__, static_folder=None, proj_home=proj_home)
+    app = ADSFlask(__name__, static_folder=None)
     app.url_map.strict_slashes = False
 
     app.cache = Cache(app) 
