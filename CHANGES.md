@@ -1,3 +1,7 @@
+### 1.0.23
+
+* Code cleanup and waffle implementation
+
 ### 1.0.22
 
 * Undo the replacement of spaces with underscores in identifiers
