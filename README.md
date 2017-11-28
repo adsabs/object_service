@@ -1,4 +1,4 @@
-[![Stories in Ready](https://badge.waffle.io/adsabs/object_service.png?label=ready&title=Ready)](https://waffle.io/adsabs/object_service)
+[![Stories in Inbox](https://badge.waffle.io/adsabs/object_service.png?label=inbox&title=Inbox)](https://waffle.io/adsabs/object_service)
 [![Build Status](https://travis-ci.org/adsabs/object_service.svg?branch=master)](https://travis-ci.org/adsabs/object_service)
 [![Coverage Status](https://coveralls.io/repos/adsabs/object_service/badge.svg)](https://coveralls.io/r/adsabs/object_service)
 [![Code Climate](https://codeclimate.com/github/adsabs/object_service/badges/gpa.svg)](https://codeclimate.com/github/adsabs/object_service)
