@@ -2,6 +2,7 @@
 [![Build Status](https://travis-ci.org/adsabs/object_service.svg?branch=master)](https://travis-ci.org/adsabs/object_service)
 [![Coverage Status](https://coveralls.io/repos/adsabs/object_service/badge.svg)](https://coveralls.io/r/adsabs/object_service)
 [![Code Climate](https://codeclimate.com/github/adsabs/object_service/badges/gpa.svg)](https://codeclimate.com/github/adsabs/object_service)
+[![Issue Count](https://codeclimate.com/github/adsabs/object_service/badges/issue_count.svg)](https://codeclimate.com/github/adsabs/object_service)
 
 Micro service implementation of ADS object searches. This micro service supports search of the literature for bibliographic records relevant to one or more astronomical objects or for a specified position on the sky. An object name query searches used the SIMBAD and/or NED services to find relevant records in the ADS.
 
