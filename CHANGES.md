@@ -1,3 +1,7 @@
+### 1.0.25
+
+* No more local caching 
+
 ### 1.0.24
 
 * More code cleanup

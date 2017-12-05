@@ -1,7 +1,6 @@
 from flask import current_app, request
 from flask_restful import Resource
 from flask_discoverer import advertise
-from flask_cache import Cache
 from SIMBAD import get_simbad_data
 from SIMBAD import do_position_query
 from SIMBAD import parse_position_string
@@ -53,18 +52,14 @@ class ObjectSearch(Resource):
         if id_num == 0:
             return {"Error": "Unable to get results!",
                     "Error Info": "No identifiers/objects found in POST body"}, 200
-        # Now check if we have anything cached for them
-        cached = {id:current_app.cache.get(id.upper()) for id in identifiers if current_app.cache.get(id.upper())}
         if source in ['simbad','ned'] and len(identifiers) > 0:
-             # If we have cached values, filter those out from the initial list
-            if cached:
-                current_app.logger.debug('Received %s %s. Using %s entries from cache.' % (id_num, input_type, len(cached)))
-                identifiers = [id for id in identifiers if not current_app.cache.get(id.upper())]
             if identifiers:
-                # We have identifiers, not found in the cache
+                # We have identifiers
                 if source == 'simbad':
                     result = get_simbad_data(identifiers, input_type)
                 else:
+                    if input_type == 'identifiers':
+                        input_type = 'simple'
                     result = get_ned_data(identifiers, input_type)
                 if 'Error' in result:
                     # An error was returned!
@@ -75,23 +70,11 @@ class ObjectSearch(Resource):
                     # We have results!
                     duration = time.time() - stime
                     current_app.logger.info('Found objects for %s %s in %s user seconds.' % (source.upper(), input_type, duration))
-                    # Before returning results, cache them
-                    for ident, value in result['data'].items():
-                        current_app.cache.set(ident.upper(), value, timeout=current_app.config.get('OBJECTS_CACHE_TIMEOUT'))
                     # Now pick the entries in the results that correspond with the original object names
                     if input_type == 'objects':
                         result['data'] = {k: result['data'].get(k.upper()) for k in identifiers}
-                    # If we had results from cache, merge these in
-                    if cached:
-                        res = cached.copy()
-                        res.update(result.get('data',{}))
-                        return res
-                    # Otherwise just send back the results
-                    else:
-                        return result.get('data',{})
-            elif cached:
-                # We only had cached results
-                return cached
+                    # Send back the results
+                    return result.get('data',{})
             else:
                 # This should never happen
                 current_app.logger.error('No data found, even though we had %s! Should never happen!'%input_type)

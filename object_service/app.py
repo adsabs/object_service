@@ -1,7 +1,6 @@
 from views import ObjectSearch, PositionSearch, QuerySearch
 from flask_restful import Api
 from flask_discoverer import Discoverer
-from flask_cache import Cache
 from adsmutils import ADSFlask
 
 def create_app():
@@ -12,8 +11,6 @@ def create_app():
 
     app = ADSFlask(__name__, static_folder=None)
     app.url_map.strict_slashes = False
-
-    app.cache = Cache(app) 
 
     api = Api(app)
     api.add_resource(ObjectSearch, '/', '/<string:objects>', '/<string:objects>/<string:source>')
