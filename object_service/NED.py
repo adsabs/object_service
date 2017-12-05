@@ -69,6 +69,12 @@ def get_ned_data(id_list, input_type):
                 # NED query was not successful
                 current_app.logger.info('NED query failed! NED returned status code {rcode} for object {object}'.format(rcode=statuscode, object=ident))
                 continue
+    elif input_type == 'simple':
+        # We just take the indexed NED identifier value and remove the underscore
+        results = {}
+        results['data'] = {}
+        for ident in id_list:
+            results['data'][ident] = {'id': ident, 'canonical': ident.replace('_',' ')}
     else:
         return {"Error": "Unable to get results!", "Error Info": "Unknown input type specified!"}
 
