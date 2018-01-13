@@ -12,7 +12,11 @@ def do_ned_object_lookup(url, oname):
     payload = {
         "name": {"v": "{object}".format(object=oname)}
     }
-    headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
+    headers = {
+        'User-Agent': 'ADS Object Service (Object Search)',
+        'Content-type': 'application/json', 
+        'Accept': 'text/plain'
+    }
     # Get timeout for request from the config (use 1 second if not found)
     TIMEOUT = current_app.config.get('OBJECTS_NED_TIMEOUT',1)
     try:
