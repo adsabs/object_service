@@ -1,3 +1,7 @@
+### 1.0.26
+
+* Special User Agent string for external requests
+
 ### 1.0.25
 
 * No more local caching 

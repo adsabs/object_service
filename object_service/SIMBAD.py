@@ -64,6 +64,11 @@ def get_simbad_data(id_list, input_type):
         'lang' : 'adql',
         'format' : 'json'
     }
+
+    headers = {
+        'User-Agent': 'ADS Object Service (Object Search)'
+    }
+
     results = {}
     # Establish the SIMBAD query, based on the type of input
     if input_type == 'objects':
@@ -98,7 +103,7 @@ def get_simbad_data(id_list, input_type):
     # Get timeout for request from the config (use 1 second if not found)
     TIMEOUT = current_app.config.get('OBJECTS_SIMBAD_TIMEOUT',1)
     try:
-        r = requests.post(QUERY_URL, data=params, timeout=TIMEOUT)
+        r = requests.post(QUERY_URL, data=params, headers=headers, timeout=TIMEOUT)
     except (ConnectTimeout, ReadTimeout) as err:
         current_app.logger.info('SIMBAD request to %s timed out! Request took longer than %s second(s)'%(QUERY_URL, TIMEOUT))
         return {"Error": "Unable to get results!", "Error Info": "SIMBAD request timed out: {0}".format(err)}
@@ -148,8 +153,12 @@ def do_position_query(RA, DEC, RADIUS):
                        AND coo_bibcode IS NOT NULL \
                        AND ra IS NOT NULL \
                        AND dec IS NOT NULL;" % (RA, DEC, RADIUS)
+    headers = {
+        'User-Agent': 'ADS Object Service (Cone Search)'
+    }
+
     try:
-        r = requests.post(QUERY_URL, data=params)
+        r = requests.post(QUERY_URL, data=params, headers=headers)
     except Exception, err:
         results = {'Error': 'Unable to get results from %s!'%QUERY_URL, 'Error Info': 'SIMBAD query blew up (%s)'%err}
     try:
