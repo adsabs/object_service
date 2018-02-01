@@ -1,3 +1,7 @@
+### 1.0.27
+
+* specify version for adsmutils in requirements.txt
+
 ### 1.0.26
 
 * Special User Agent string for external requests
