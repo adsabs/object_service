@@ -74,7 +74,7 @@ def get_simbad_data(id_list, input_type):
     if input_type == 'objects':
         results['data'] = {k:None for k in id_list}
         # For the object names query we want to have all variants returned, cache them, and select only those entries that match the input
-        qfilter = " OR ".join(map(lambda a: "ident2.id=\'%s\'"%a.upper(),id_list))
+        qfilter = " OR ".join(map(lambda a: "ident2.id=\'%s\'"%a, id_list))
         params['query'] = 'SELECT ident1.oidref, ident1.id, basic.main_id FROM ident AS ident1 JOIN ident AS ident2 ON ident1.oidref = ident2.oidref JOIN basic ON ident1.oidref = basic.oid WHERE %s;' % qfilter
     elif input_type == 'identifiers':
         # For the identifiers query we just want to have the canonical names returned
