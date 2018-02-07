@@ -1,3 +1,7 @@
+### 1.0.28
+
+* update of query sent to SIMBAD TAP (no uppercasing)
+
 ### 1.0.27
 
 * specify version for adsmutils in requirements.txt
