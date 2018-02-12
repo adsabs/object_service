@@ -80,23 +80,6 @@ def get_simbad_data(id_list, input_type):
         # For the identifiers query we just want to have the canonical names returned
         qfilter = " OR ".join(map(lambda a: "oid=\'%s\'"%a,id_list))
         params['query'] = "SELECT oid, main_id, main_id FROM basic WHERE %s;" % qfilter
-    elif input_type == 'facets':
-        # For the facets query we expect a list of hierarchical facets of the form
-        #   ["<level>/<object type>/<object id>", ...]
-        # which will get translated into
-        #   ["<level>/<object type>/<canonical object name>", ...]
-        # First deal with potential top level facets
-        top_level = [f for f in id_list if f.count('/') < 2]
-        # Assure we only have the next level facets
-        id_list = [f for f in id_list if f.count('/') == 2]
-        # If we only have top level facets, we can already return
-        if len(top_level) > 0 and len(id_list) == 0:
-            results['data'] = {f:f for f in top_level}
-            return results
-        idmap = {oid:{'level':level, 'type':otype} for (level,otype,oid) in  [x.split('/') for x in id_list]}
-        # Get data using the same recipe as the 'identifiers' case
-        qfilter = " OR ".join(map(lambda a: "oid=\'%s\'"%a,idmap.keys()))
-        params['query'] = "SELECT oid, main_id, main_id FROM basic WHERE %s;" % qfilter
     else:
         return {"Error": "Unable to get results!", "Error Info": "Unknown input type specified!"}
     # Fire off the query
@@ -124,15 +107,8 @@ def get_simbad_data(id_list, input_type):
             res = {d[1].replace('NAME ',''): {"canonical": d[2].replace('NAME ',''), "id": str(d[0])} for d in r.json()['data']}
             results['data'] = res.copy()
             results['data'].update({k.replace(' ',''):v for k,v in results['data'].items()})
-        elif input_type == 'identifiers':
-            results['data'] = {str(d[0]): {"canonical": d[2].replace('NAME ',''), "id": str(d[0])} for d in r.json()['data']}
         else:
-            results['data'] = {"%s/%s/%s" % (idmap.get(str(d[0]))['level'], idmap.get(str(d[0]))['type'], d[0]):"%s/%s/%s" % (idmap.get(str(d[0]))['level'], idmap.get(str(d[0]))['type'], d[2].replace('NAME ','')) for d in r.json()['data']}
-            if len(top_level) > 0:
-                top_dict = {f:f for f in top_level}
-                res = top_dict.copy()
-                res.update(results.get('data',{}))
-                results['data'] = res
+            results['data'] = {str(d[0]): {"canonical": d[2].replace('NAME ',''), "id": str(d[0])} for d in r.json()['data']}
     except:
         results = {"Error": "Unable to get results!", "Error Info": "Bad data returned by SIMBAD"}
     return results

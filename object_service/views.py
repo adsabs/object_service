@@ -5,6 +5,7 @@ from SIMBAD import get_simbad_data
 from SIMBAD import do_position_query
 from SIMBAD import parse_position_string
 from NED import get_ned_data
+from NED import get_NED_refcodes
 from utils import get_objects_from_query_string
 import time
 import timeout_decorator
@@ -24,14 +25,13 @@ class ObjectSearch(Resource):
         # Get the supplied list of identifiers
         identifiers = []
         objects = []
-        facets = []
         input_type = None
         # determine whether a source for the data was specified
         try:
             source = request.json['source'].lower()
         except:
             source = 'simbad'
-        for itype in ['identifiers', 'objects', 'facets']:
+        for itype in ['identifiers', 'objects']:
             try:
                 identifiers = request.json[itype]
                 identifiers = map(str, identifiers)
@@ -42,9 +42,9 @@ class ObjectSearch(Resource):
             current_app.logger.error('No identifiers and objects were specified for SIMBAD object query')
             return {"Error": "Unable to get results!",
                     "Error Info": "No identifiers/objects found in POST body"}, 200
-        # We should either have a list of identifiers, a list of object names or a list of facets
-        if len(identifiers) == 0 and len(objects) == 0 and len(facets) == 0:
-            current_app.logger.error('No identifiers, objects or facets were specified for SIMBAD object query')
+        # We should either have a list of identifiers or a list of object names
+        if len(identifiers) == 0 and len(objects) == 0:
+            current_app.logger.error('No identifiers or objects were specified for SIMBAD object query')
             return {"Error": "Unable to get results!",
                     "Error Info": "No identifiers/objects found in POST body"}, 200
         # How many iden identifiers do we have?
@@ -189,3 +189,29 @@ class QuerySearch(Resource):
                     "Error Info": "No results found, where results were expected! Needs attention!"
                     }
                 return result
+
+class ClassicObjectSearch(Resource):
+
+    """Return object NED refcodes for a given object list"""
+    scopes = []
+    rate_limit = [1000, 60 * 60 * 24]
+    decorators = [advertise('scopes', 'rate_limit')]
+
+    def post(self):
+        stime = time.time()
+        results = {}
+        # Get the supplied list of identifiers
+        if not request.json or 'objects' not in request.json:
+                current_app.logger.error('No objects were provided to Classic Object Search')
+                return {'Error': 'Unable to get results!',
+                            'Error Info': 'No object names found in POST body'}, 200
+
+        results = get_NED_refcodes(request.json)
+
+        if "Error" in results:
+                    current_app.logger.error('Classic Object Search request request blew up')
+                    return results, 500
+#        duration = time.time() - stime
+#        current_app.logger.info('Classic Object Search request successfully completed in %s real seconds'%duration)
+        return results
+            

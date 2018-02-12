@@ -1,3 +1,7 @@
+### 1.0.29
+
+* endpoint to support ADS Classic NED query
+
 ### 1.0.28
 
 * update of query sent to SIMBAD TAP (no uppercasing)

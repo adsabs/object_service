@@ -6,6 +6,7 @@ import requests
 import json
 from requests.exceptions import ConnectTimeout, ReadTimeout, ConnectionError
 import timeout_decorator
+import datetime
 
 def do_ned_object_lookup(url, oname):
     # Prepare the headers for the query
@@ -86,3 +87,38 @@ def get_ned_data(id_list, input_type):
         return results
     else:
         return {"Error": "Unable to get results!", "Error Info": "No results were found for NED identifiers: {0}".format(id_list)}
+
+def get_NED_refcodes(obj_data):
+    # We use the Ned component of astroquery to interact with NED
+    from astroquery.ned import Ned
+    # Where we will store results
+    result = {}
+    result['data'] = []
+    # We're here, so the data submitted has an 'objects' attribute
+    objects = obj_data.get('objects')
+    # Let's just check to be sure that the list actually contains entries
+    if len(objects) == 0:
+        return {"Error": "Unable to get results!",
+                "Error Info": "No object names provided"}
+    # Now attempt to retrieve refcodes for each of the object names submitted
+    for object_name in objects:
+        # To check if there is an entry in the NED database, try to get the canonical object name
+        try:
+            object_check = Ned.query_object(object_name)
+            NED_name = object_check['Object Name']
+        except:
+            continue
+        # There is an entry, so now try to get the associated refcodes
+        result_table = Ned.get_table(object_name, 
+                               table='references', 
+                               from_year=obj_data.get('start_year', 1800),
+                               to_year=obj_data.get('end_year', datetime.datetime.now().year))
+        # If there are no refcode entries, we just skip to the next object (if there's any left)
+        try:
+            result['data'] += [r['Refcode'] for r in result_table]
+        except:
+            continue
+
+    return result
+        
+   

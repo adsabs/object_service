@@ -9,6 +9,8 @@ import time
 from object_service import app
 import json
 import httpretty
+import mock
+import astroquery.ned
 
 class TestExpectedResults(TestCase):
 
@@ -42,6 +44,31 @@ class TestExpectedResults(TestCase):
         self.assertTrue(r.status_code == 200)
         # See if we received the expected results
         expected = {u'3133169': {u'id': '3133169', u'canonical': u'LMC'}, u'1575544': {u'id': '1575544', u'canonical': u'ANDROMEDA'}}
+        self.assertEqual(r.json, expected)
+    
+    @httpretty.activate
+    def test_object_NED_search_200(self):
+        '''Test to see if calling the object search endpoint
+           works for valid data'''
+        QUERY_URL = self.app.config.get('OBJECTS_NED_URL')
+        mockdata =  {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"]]}
+        # We will be doing a POST request with a set of identifiers
+        identifiers = ["MESSIER_101", "Large_Magellanic_Cloud"]
+        # Mock the reponse
+        httpretty.register_uri(
+            httpretty.POST, QUERY_URL,
+            content_type='application/json',
+            status=200,
+            body='%s'%json.dumps(mockdata))
+        # Do the POST request
+        r = self.client.post(
+            url_for('objectsearch'),
+            content_type='application/json',
+            data=json.dumps({'identifiers': identifiers, 'source':'NED'}))
+        # The response should have a status code 200
+        self.assertTrue(r.status_code == 200)
+        # See if we received the expected results
+        expected = {u'MESSIER_101': {u'id': u'MESSIER_101', u'canonical': u'MESSIER 101'}, u'Large_Magellanic_Cloud': {u'id': u'Large_Magellanic_Cloud', u'canonical': u'Large Magellanic Cloud'}}
         self.assertEqual(r.json, expected)
 
     @httpretty.activate
@@ -216,6 +243,27 @@ class TestExpectedResults(TestCase):
         # See if we received the expected results
         expected = {"query": "bibstem:A&A simbid:1575544 year:2015"}
         self.assertEqual(r.json, expected)
+    
+    mock_table_data = [{'Refcode':'a'}, {'Refcode':'b'}]
+    mock_object_data = {'Object Name':'a'}
+    @mock.patch('astroquery.ned.Ned.get_table', return_value=mock_table_data)
+    @mock.patch('astroquery.ned.Ned.query_object', return_value=mock_object_data)
+    def test_object_NED_Classic_search_200(self, mock_get_table, mock_query_object):
+        '''Test to see if calling the object search endpoint
+           works for valid data'''
+        # We will be doing a POST request with a set of identifiers
+        objects = ["3C 273", "51 Peg b", "NGC 224"]
+        # Mock the reponse
+        # Do the POST request
+        r = self.client.post(
+            url_for('classicobjectsearch'),
+            content_type='application/json',
+            data=json.dumps({'objects': objects, 'start_year':2017, 'end_year': 2017}))
+        # The response should have a status code 200
+        self.assertTrue(r.status_code == 200)
+        self.assertTrue('data' in r.json)
+        # See if we received the expected results
+        self.assertEqual(r.json, {u'data': [u'a', u'b', u'a', u'b', u'a', u'b']})
 
 if __name__ == '__main__':
     unittest.main()
