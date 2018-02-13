@@ -1,3 +1,7 @@
+### 1.0.30
+
+* remove dependency on astroquery
+
 ### 1.0.29
 
 * endpoint to support ADS Classic NED query
