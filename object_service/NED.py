@@ -2,6 +2,8 @@ import re
 import sys
 import traceback
 from flask import current_app
+from flask import request
+from client import client
 import requests
 import json
 from requests.exceptions import ConnectTimeout, ReadTimeout, ConnectionError
@@ -89,11 +91,22 @@ def get_ned_data(id_list, input_type):
         return {"Error": "Unable to get results!", "Error Info": "No results were found for NED identifiers: {0}".format(id_list)}
 
 def get_NED_refcodes(obj_data):
-    # We use the Ned component of astroquery to interact with NED
-    from astroquery.ned import Ned
+    # NED endpoint to get data
+    ned_url = current_app.config.get('OBJECTS_NED_URL')
     # Where we will store results
     result = {}
-    result['data'] = []
+    # For ambiguous object names we will return lists of aliases
+    result['ambiguous'] = []
+    # Canonical object names returned from NED
+    canonicals = []
+    # Parameters for NED query
+    payload = {}
+    # Headers for request
+    headers = {
+        'User-Agent': 'ADS Object Service (Classic Object Search)',
+        'Content-type': 'application/json', 
+        'Accept': 'text/plain'
+    }
     # We're here, so the data submitted has an 'objects' attribute
     objects = obj_data.get('objects')
     # Let's just check to be sure that the list actually contains entries
@@ -102,23 +115,71 @@ def get_NED_refcodes(obj_data):
                 "Error Info": "No object names provided"}
     # Now attempt to retrieve refcodes for each of the object names submitted
     for object_name in objects:
-        # To check if there is an entry in the NED database, try to get the canonical object name
-        try:
-            object_check = Ned.query_object(object_name)
-            NED_name = object_check['Object Name']
-        except:
-            continue
+        # Payload per NED documentation: https://ned.ipac.caltech.edu/ui/Documents/ObjectLookup
+        payload["name"] = {"v": "{0}".format(object_name)}
         # There is an entry, so now try to get the associated refcodes
-        result_table = Ned.get_table(object_name, 
-                               table='references', 
-                               from_year=obj_data.get('start_year', 1800),
-                               to_year=obj_data.get('end_year', datetime.datetime.now().year))
-        # If there are no refcode entries, we just skip to the next object (if there's any left)
+        # Get timeout for request from the config (use 1 second if not found)
+        TIMEOUT = current_app.config.get('OBJECTS_NED_TIMEOUT',1)
+        # Query NED API to retrieve the canonical object names for the ones provided
+        # (if known to NED)
         try:
-            result['data'] += [r['Refcode'] for r in result_table]
-        except:
+            r = requests.post(ned_url, data=json.dumps(payload), headers=headers, timeout=TIMEOUT)
+        except (ConnectTimeout, ReadTimeout) as err:
+            current_app.logger.info('NED request to %s timed out! Request took longer than %s second(s)'%(url, TIMEOUT))
+            return {"Error": "Unable to get results!", "Error Info": "NED request timed out: {0}".format(str(err))}
+        except Exception, err:
+            current_app.logger.error("NED request to %s failed (%s)"%(url, err))
+            return {"Error": "Unable to get results!", "Error Info": "NED request failed ({0})".format(err)}
+        # Check if we got a 200 status code back
+        if r.status_code != 200:
+            current_app.logger.info('NED request to %s failed! Status code: %s'%(url, r.status_code))
+            return {"Error": "Unable to get results!", "Error Info": "NED returned status %s" % r.status_code}
+        # We got a proper response back with data
+        ned_data = r.json()
+        # We are not interested in these cases: either not a valid object name, or a known one, but there 
+        # is no entry in the NED database
+        if ned_data['ResultCode'] in [0,2]:
+            # No or no unique result
             continue
-
-    return result
+        # This is still a useless case, but we want to send some data back for potential use. These are
+        # "ambiguous" cases, where there are a number of potential candidates. This info is sent back.
+        elif ned_data['ResultCode'] == 1:
+            try:
+                result['ambiguous'].append({object_name:ned_data['Interpreted']['Aliases']})
+            except:
+                continue
+        else:
+        # We have a canonical name. Store it in the appropriate list, so that we can query Solr with
+        # it and retrieve bibcodes
+            try:
+                canonicals.append(ned_data['Interpreted']['Name'])
+            except:
+                # This should not happen, because result codes 3 are supposed to have the canonical name
+                continue
+    # We retrieve bibcodes with one Solr query, using "nedid:" (we use canonical object names as identifiers,
+    # with spaces replaced by underscores)
+    obj_list = " OR ".join(map(lambda a: "nedid:%s" % a.replace(' ','_'), canonicals))
+    q = '%s' % obj_list
+    # Did we get a time range for filtering?
+    q += ' year:{0}'.format(obj_data.get('start_year', 1800))
+    q += '-{0}'.format(obj_data.get('end_year', datetime.datetime.now().year))
+    # Get the information from Solr
+    headers = {'X-Forwarded-Authorization': request.headers.get('Authorization')}
+    params = {'wt': 'json', 'q': q, 'fl': 'bibcode',
+                      'rows': current_app.config.get('OBJECT_SOLR_MAX_HITS')}
+    response = client().get(current_app.config.get('OBJECTS_SOLRQUERY_URL'), params=params,headers=headers)
+    # See if our request was successful
+    if response.status_code != 200:
+        return {"Error": "Unable to get results!",
+                        "Error Info": response.text,
+                        "Status Code": response.status_code}
+    # Retrieve the bibcodes from the data sent back. Throw an error if no bibcodes were found (should not happen)
+    resp = response.json()
+    try:
+        result['data'] = [d['bibcode'] for d in resp['response']['docs']]
+        return result
+    except:
+        return {"Error": "Unable to get results!", "Error Info": "No bibcodes returned for query: {0}".format(q)}
+ 
         
    
