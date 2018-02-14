@@ -1,6 +1,7 @@
 from flask import current_app, request
 from flask_restful import Resource
 from flask_discoverer import advertise
+from flask import Response
 from SIMBAD import get_simbad_data
 from SIMBAD import do_position_query
 from SIMBAD import parse_position_string
@@ -222,5 +223,6 @@ class ClassicObjectSearch(Resource):
         if oformat == 'json':
             return results
         else:
-            return "\n".join(results['data'])
+            output = "\n".join(results['data'])
+            return Response(output, mimetype='text/plain; charset=us-ascii')
             
