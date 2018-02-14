@@ -163,6 +163,14 @@ def get_NED_refcodes(obj_data):
     # Did we get a time range for filtering?
     q += ' year:{0}'.format(obj_data.get('start_year', 1800))
     q += '-{0}'.format(obj_data.get('end_year', datetime.datetime.now().year))
+    # Did we get a bibstem filter?
+    if obj_data.has_key('journals'):
+        jrnl_list = " OR ".join(map(lambda a: "%s" % a, obj_data['journals']))
+        q += ' bibstem:({0})'.format(jrnl_list)
+    # Do we want refereed publications only?
+    if obj_data.has_key('refereed_status'):
+        q += ' property:{0}'.format(obj_data['refereed_status'])
+    print q
     # Get the information from Solr
     headers = {'X-Forwarded-Authorization': request.headers.get('Authorization')}
     params = {'wt': 'json', 'q': q, 'fl': 'bibcode',

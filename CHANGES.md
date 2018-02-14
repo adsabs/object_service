@@ -1,3 +1,7 @@
+### 1.0.31
+
+* additional output format and filters for "Classic" endpoint
+
 ### 1.0.30
 
 * remove dependency on astroquery
