@@ -209,9 +209,18 @@ class ClassicObjectSearch(Resource):
         results = get_NED_refcodes(request.json)
 
         if "Error" in results:
-                    current_app.logger.error('Classic Object Search request request blew up')
-                    return results, 500
+            current_app.logger.error('Classic Object Search request request blew up')
+            return results, 500
         duration = time.time() - stime
         current_app.logger.info('Classic Object Search request successfully completed in %s real seconds'%duration)
-        return results
+        # what output format?
+        try:
+            oformat = request.json['output_format']
+        except:
+            oformat = 'json'
+        # send the results back in the requested format
+        if oformat == 'json':
+            return results
+        else:
+            return "\n".join(results['data'])
             
