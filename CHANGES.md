@@ -1,3 +1,7 @@
+### 1.0.32
+
+* Fix of mime-type for ASCII output. Add filtering by month.
+
 ### 1.0.31
 
 * additional output format and filters for "Classic" endpoint

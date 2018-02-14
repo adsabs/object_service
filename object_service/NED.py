@@ -160,9 +160,14 @@ def get_NED_refcodes(obj_data):
     # with spaces replaced by underscores)
     obj_list = " OR ".join(map(lambda a: "nedid:%s" % a.replace(' ','_'), canonicals))
     q = '%s' % obj_list
-    # Did we get a time range for filtering?
-    q += ' year:{0}'.format(obj_data.get('start_year', 1800))
-    q += '-{0}'.format(obj_data.get('end_year', datetime.datetime.now().year))
+    # Format the date range for filtering: pubdate:[YYYY-MM TO YYYY-MM]
+    date_range = "[{0}-{1} TO {2}-{3}]".format(
+        obj_data.get('start_year', str(1800)),
+        obj_data.get('start_month', "00"),
+        obj_data.get('end_year', str(datetime.datetime.now().year)),
+        obj_data.get('end_month', "00"),
+    )
+    q += ' pubdate:{0}'.format(date_range)
     # Did we get a bibstem filter?
     if obj_data.has_key('journals'):
         jrnl_list = " OR ".join(map(lambda a: "%s" % a, obj_data['journals']))
@@ -170,7 +175,6 @@ def get_NED_refcodes(obj_data):
     # Do we want refereed publications only?
     if obj_data.has_key('refereed_status'):
         q += ' property:{0}'.format(obj_data['refereed_status'])
-    print q
     # Get the information from Solr
     headers = {'X-Forwarded-Authorization': request.headers.get('Authorization')}
     params = {'wt': 'json', 'q': q, 'fl': 'bibcode',
