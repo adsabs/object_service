@@ -1,3 +1,7 @@
+### 1.0.33
+
+* Endpoint 'classic' renamed to 'nedsrv'
+
 ### 1.0.32
 
 * Fix of mime-type for ASCII output. Add filtering by month.
