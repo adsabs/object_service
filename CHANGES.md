@@ -1,3 +1,7 @@
+### 1.0.34
+
+* Bugfix for nedsrv endpoint
+
 ### 1.0.33
 
 * Endpoint 'classic' renamed to 'nedsrv'

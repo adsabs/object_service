@@ -152,7 +152,7 @@ def get_NED_refcodes(obj_data):
         # We have a canonical name. Store it in the appropriate list, so that we can query Solr with
         # it and retrieve bibcodes
             try:
-                canonicals.append(ned_data['Interpreted']['Name'])
+                canonicals.append(ned_data['Preferred']['Name'])
             except:
                 # This should not happen, because result codes 3 are supposed to have the canonical name
                 continue
