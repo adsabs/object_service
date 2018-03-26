@@ -35,6 +35,9 @@ def parse_position_string(pstring):
         position = pstring.strip()
         search_radius = current_app.config.get('OBJECTS_DEFAULT_RADIUS')
     # Now turn the position into a decimal RA and DEC
+    # We need to have RA and DEC
+    if position.count(' ') == 0:
+        raise IncorrectPositionFormatError
     # If we have ony one space in the position string, we are done
     if position.count(' ') == 1:
         RA, DEC = map(float, position.split())
@@ -53,7 +56,7 @@ def parse_position_string(pstring):
             RA, DEC = c.to_string('decimal').split()
         except:
             raise IncorrectPositionFormatError
-    return RA, DEC, radius
+    return RA, DEC, search_radius
 
 def get_simbad_data(id_list, input_type):
     QUERY_URL = current_app.config.get('OBJECTS_SIMBAD_TAP_URL')
@@ -112,7 +115,7 @@ def get_simbad_data(id_list, input_type):
     except:
         results = {"Error": "Unable to get results!", "Error Info": "Bad data returned by SIMBAD"}
     return results
-
+    
 @timeout_decorator.timeout(5)
 def do_position_query(RA, DEC, RADIUS):
     QUERY_URL = current_app.config.get('OBJECTS_SIMBAD_TAP_URL')
@@ -136,9 +139,9 @@ def do_position_query(RA, DEC, RADIUS):
     try:
         r = requests.post(QUERY_URL, data=params, headers=headers)
     except Exception, err:
-        results = {'Error': 'Unable to get results from %s!'%QUERY_URL, 'Error Info': 'SIMBAD query blew up (%s)'%err}
+        return {'Error': 'Unable to get results from %s!'%QUERY_URL, 'Error Info': 'SIMBAD query blew up (%s)'%err}
     try:
         bibcodes = list(set([d[0] for d in r.json()['data']]))
     except Exception, err:
-        return {'Error': 'Unable to get results!', 'Error Info': err}
+        return {'Error': 'Unable to get results!', 'Error Info': 'Unable to retrieve bibcodes from SIMBAD response (no "data" key)!'}
     return {'data': bibcodes}

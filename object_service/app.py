@@ -1,3 +1,4 @@
+from werkzeug.serving import run_simple
 from views import ObjectSearch
 from views import PositionSearch
 from views import QuerySearch
@@ -27,5 +28,4 @@ def create_app():
     return app
 
 if __name__ == "__main__":
-    app = create_app()
-    app.run(debug=True, use_reloader=False)
+    run_simple('0.0.0.0', 5555, create_app(), use_reloader=False, use_debugger=False)

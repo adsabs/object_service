@@ -41,21 +41,18 @@ def get_ned_data(id_list, input_type):
     QUERY_URL = current_app.config.get('OBJECTS_NED_URL')
     current_app.logger.info('URL used to get NED data: %s'%QUERY_URL)
 
-    params = {
-        'request' : 'doQuery',
-        'lang' : 'adql',
-        'format' : 'json'
-    }
     results = {}
     results['data'] = {}
+    results['skipped'] = []
     # Establish the NED query, based on the type of input
-    if input_type == 'identifiers':
+    if input_type in ['identifiers', 'objects']:
         for ident in id_list:
             # Since all spaces in the identifiers where replaced by underscores, we have to undo this
             odata = do_ned_object_lookup(QUERY_URL, ident.replace('_',' '))
             if "Error" in odata:
-                # NED query failed, no need to proceed with this identifier
-                continue
+                # NED query failed. This failure either means timeout or service problems
+                # We return nothing for the entire query, with the proper error message
+                return odata
             # Did we get a successful result back?
             statuscode = odata.get("StatusCode", 999)
             if statuscode == 100:
@@ -63,32 +60,36 @@ def get_ned_data(id_list, input_type):
                 resultcode = odata.get("ResultCode", 999)
                 if resultcode == 3:
                     # Proper object name, known by NED
-                    results['data'][ident] = {'id': ident, 'canonical': odata['Preferred']['Name']}
+                    if input_type == 'identifiers':
+                        results['data'][ident] = {'id': ident, 'canonical': odata['Preferred']['Name']}
+                    else:
+                        results['data'][ident] = {'id': odata['Preferred']['Name'].replace(' ','_'), 'canonical': odata['Preferred']['Name']}
                 elif resultcode in [0,1,2]:
                     # Unable to create usable results
+                    results['skipped'].append(ident)
                     current_app.logger.info('NED returned result code {rcode} for object {object}'.format(rcode=resultcode, object=ident))
                     continue
                 else:
                     # Unexpected result code!
+                    results['skipped'].append(ident)
                     current_app.logger.info('Unexpected result code from NED! NED returned result code {rcode} for object {object}'.format(rcode=resultcode, object=ident))
                     continue
             else:
                 # NED query was not successful
+                results['skipped'].append(ident)
                 current_app.logger.info('NED query failed! NED returned status code {rcode} for object {object}'.format(rcode=statuscode, object=ident))
                 continue
     elif input_type == 'simple':
         # We just take the indexed NED identifier value and remove the underscore
         results = {}
         results['data'] = {}
+        results['skipped'] = []
         for ident in id_list:
             results['data'][ident] = {'id': ident, 'canonical': ident.replace('_',' ')}
     else:
         return {"Error": "Unable to get results!", "Error Info": "Unknown input type specified!"}
 
-    if len(results['data']) > 0:
-        return results
-    else:
-        return {"Error": "Unable to get results!", "Error Info": "No results were found for NED identifiers: {0}".format(id_list)}
+    return results
 
 def get_NED_refcodes(obj_data):
     # NED endpoint to get data
