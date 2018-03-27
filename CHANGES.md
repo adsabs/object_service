@@ -1,3 +1,7 @@
+### 1.0.35
+
+* Integration of NED into object search
+
 ### 1.0.34
 
 * Bugfix for nedsrv endpoint

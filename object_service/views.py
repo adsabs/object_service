@@ -8,6 +8,7 @@ from SIMBAD import parse_position_string
 from NED import get_ned_data
 from NED import get_NED_refcodes
 from utils import get_objects_from_query_string
+from utils import translate_query
 import time
 import timeout_decorator
 
@@ -142,8 +143,15 @@ class QuerySearch(Resource):
                 solr_query = ''
         else:
             solr_query = query
-        current_app.logger.info('Received SIMBAD object query: %s'%solr_query)
-        new_query = solr_query.replace('object:','simbid:')
+        current_app.logger.info('Received object query: %s'%solr_query)
+        # This query will be split up into two components: a SIMBAD and a NED object query
+        simbad_query = solr_query.replace('object:','simbid:')
+        ned_query = solr_query.replace('object:','nedid:')
+        # Check if an explicit target service was specified
+        try:
+            target = request.json['target']
+        except:
+            target = 'all'
         # If we receive a (Solr) query string, we need to parse out the object names
         try:
             identifiers = get_objects_from_query_string(solr_query)
@@ -160,36 +168,49 @@ class QuerySearch(Resource):
         if id_num == 0:
             return {"Error": "Unable to get results!",
                     "Error Info": "No identifiers/objects found in POST body"}, 200
-        # Source to query 
-        source = 'simbad'
-        if source in ['simbad','all'] and len(identifiers) > 0:
-            if identifiers:
-                for ident in identifiers:
-                    result = get_simbad_data([ident], 'objects')
-                    if 'Error' in result:
-                        # An error was returned!
-                        current_app.logger.error('Failed to find data for SIMBAD %s query!'%input_type)
-                        return result
-                    try:  
-                        SIMBADid =[e.get('id',0) for e in result['data'].values()][0]
-                    except:
-                        SIMBADid = '0'
-                    name2id[ident] = SIMBADid 
-                for oname in identifiers:
-                    try:
-                        SIMBADid = name2id.get(oname)
-                    except:
-                        SIMBADid = '0'
-                    new_query = new_query.replace(oname, SIMBADid)
-                return {"query": new_query}
-            else:
-                # This should never happen
-                current_app.logger.error('No data found, even though we had %s! Should never happen!'%input_type)
-                result = {
-                    "Error": "Failed to find data for SIMBAD %s query!"%input_type,
-                    "Error Info": "No results found, where results were expected! Needs attention!"
-                    }
-                return result
+        # Get translations
+        simbad_query = ''
+        ned_query = ''
+        translated_query = ''
+        if target.lower() in ['simbad', 'all']:
+            name2simbid = {}
+            for ident in identifiers:
+                result = get_simbad_data([ident], 'objects')
+                if 'Error' in result:
+                    # An error was returned!
+                    current_app.logger.error('Failed to find data for SIMBAD object {0}!: {1}'.format(ident, result.get('Error Info','NA')))
+                    continue
+                try:  
+                    SIMBADid =[e.get('id',0) for e in result['data'].values()][0]
+                except:
+                    SIMBADid = '0'
+                name2simbid[ident] = SIMBADid
+            simbad_query = translate_query(solr_query, identifiers, name2simbid, 'simbid:')
+        if target.lower() in ['ned', 'all']:
+            name2nedid = {}
+            for ident in identifiers:
+                result = get_ned_data([ident], 'objects')
+                if 'Error' in result:
+                    # An error was returned!
+                    current_app.logger.error('Failed to find data for NED object {0}!: {1}'.format(ident, result.get('Error Info','NA')))
+                    continue
+                try:  
+                    NEDid =[e.get('id',0) for e in result['data'].values()][0]
+                except:
+                    NEDid = '0'
+                name2nedid[ident] = NEDid
+            ned_query = translate_query(solr_query, identifiers, name2nedid, 'nedid:')
+
+        if simbad_query and ned_query:
+            translated_query = '({0}) OR ({1})'.format(simbad_query, ned_query)
+        elif simbad_query:
+            translated_query = simbad_query
+        elif ned_query:
+            translated_query = ned_query
+        else:
+            translated_query = 'simbid:0'
+ 
+        return {'query': translated_query}        
 
 class ClassicObjectSearch(Resource):
 

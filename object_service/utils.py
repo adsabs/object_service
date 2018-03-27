@@ -126,3 +126,14 @@ def get_objects_from_query_string(qstring):
         else:
             objlist = objs
     return objlist
+
+def translate_query(id_query, id_list, name2id, solr_field):
+    translated_query = id_query.replace('object:', solr_field)
+    for oname in id_list:
+        try:
+            object_id = name2id.get(oname)
+        except:
+            object_id = '0'
+        translated_query = translated_query.replace(oname, object_id)
+    
+    return translated_query
