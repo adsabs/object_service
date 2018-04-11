@@ -58,6 +58,10 @@ def parse_position_string(pstring):
             raise IncorrectPositionFormatError
     return RA, DEC, search_radius
 
+def cleanup_object_name(object_name):
+    # remove catalog prefix if present
+    return re.sub('^(NAME|\*|S?V\*)\s+','',object_name)
+
 def get_simbad_data(id_list, input_type):
     QUERY_URL = current_app.config.get('OBJECTS_SIMBAD_TAP_URL')
     current_app.logger.info('TAP service used to get SIMBAD data: %s'%QUERY_URL)
@@ -107,11 +111,11 @@ def get_simbad_data(id_list, input_type):
     # 2. Canonical object name
     try:
         if input_type == 'objects':
-            res = {d[1].replace('NAME ',''): {"canonical": d[2].replace('NAME ',''), "id": str(d[0])} for d in r.json()['data']}
+            res = {cleanup_object_name(d[1]).upper(): {"canonical": cleanup_object_name(d[2]), "id": str(d[0])} for d in r.json()['data']}
             results['data'] = res.copy()
             results['data'].update({k.replace(' ',''):v for k,v in results['data'].items()})
         else:
-            results['data'] = {str(d[0]): {"canonical": d[2].replace('NAME ',''), "id": str(d[0])} for d in r.json()['data']}
+            results['data'] = {str(d[0]): {"canonical": cleanup_object_name(d[2]), "id": str(d[0])} for d in r.json()['data']}
     except:
         results = {"Error": "Unable to get results!", "Error Info": "Bad data returned by SIMBAD"}
     return results

@@ -78,6 +78,13 @@ class TestExpectedResults(TestCase):
         # See if we received the expected results
         expected = {u'ambiguous': [], u'data': [u'2016ApJ...817..111D', u'2016A&A...587A..52M']}
         self.assertEqual(r.json, expected)
+        # Do the query asking for ASCII output
+        r = self.client.post(
+            url_for('classicobjectsearch'),
+            content_type='application/json',
+            data=json.dumps({'objects': ["NGC 224"], 'output_format':'ascii'}))
+        # The response should have a status code 200
+        self.assertTrue(r.status_code == 200)
 
     @httpretty.activate
     def test_classic_query_search_ambiguous(self):

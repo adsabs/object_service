@@ -31,10 +31,6 @@ class TestConfig(TestCase):
                     ]
         missing = [x for x in required if x not in self.app.config.keys()]
         self.assertTrue(len(missing) == 0)
-        # Check if API has an actual value
-        #if os.path.exists("%s/local_config.py" % PROJECT_HOME):
-        #    self.assertTrue(
-        #        self.app.config.get('OBJECTS_API_TOKEN', None) != None)
 
 class TestDataRetrieval(TestCase):
 
@@ -498,6 +494,15 @@ class TestDataRetrieval(TestCase):
             result = parse_position_string(pstring)
         except IncorrectPositionFormatError:
             error = 'Incorrect Position Format'
+
+    def test_parse_position_string_default_radius(self):
+        '''Test to see if SIMBAD cleans up object string correctly'''
+        from object_service.SIMBAD import cleanup_object_name
+        # The function should remove catalogue prefixes
+        cats = ['NAME','*','V*','SV*']
+        objects = ["%s foobar"%c for c in cats]
+        result = list(set([cleanup_object_name(o) for o in objects]))
+        self.assertEqual(result, ['foobar'])
 
 @timeout_decorator.timeout(2)
 def timeout(s):
