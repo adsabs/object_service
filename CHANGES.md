@@ -1,3 +1,7 @@
+### 1.0.36
+
+* Unittest coverage improvement and code cleanup
+
 ### 1.0.35
 
 * Integration of NED into object search

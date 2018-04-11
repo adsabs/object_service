@@ -26,13 +26,17 @@ class ObjectSearch(Resource):
         stime = time.time()
         # Get the supplied list of identifiers
         identifiers = []
-        objects = []
         input_type = None
         # determine whether a source for the data was specified
         try:
             source = request.json['source'].lower()
         except:
             source = 'simbad'
+        # We only deal with SIMBAD or NED as source
+        if source not in ['simbad','ned']:
+            current_app.logger.error('Unsupported source for object data specified: %s'%source)
+            return {"Error": "Unable to get results!",
+                   "Error Info": "Unsupported source for object data specified: %s"%source}, 200
         for itype in ['identifiers', 'objects']:
             try:
                 identifiers = request.json[itype]
@@ -45,46 +49,33 @@ class ObjectSearch(Resource):
             return {"Error": "Unable to get results!",
                     "Error Info": "No identifiers/objects found in POST body"}, 200
         # We should either have a list of identifiers or a list of object names
-        if len(identifiers) == 0 and len(objects) == 0:
+        if len(identifiers) == 0:
             current_app.logger.error('No identifiers or objects were specified for SIMBAD object query')
             return {"Error": "Unable to get results!",
                     "Error Info": "No identifiers/objects found in POST body"}, 200
-        # How many iden identifiers do we have?
-        id_num = len(identifiers)
-        if id_num == 0:
-            return {"Error": "Unable to get results!",
-                    "Error Info": "No identifiers/objects found in POST body"}, 200
-        if source in ['simbad','ned'] and len(identifiers) > 0:
-            if identifiers:
-                # We have identifiers
-                if source == 'simbad':
-                    result = get_simbad_data(identifiers, input_type)
-                else:
-                    if input_type == 'identifiers':
-                        input_type = 'simple'
-                    result = get_ned_data(identifiers, input_type)
-                if 'Error' in result:
-                    # An error was returned!
-                    err_msg = result['Error Info']
-                    current_app.logger.error('Failed to find data for %s %s query (%s)!'%(source.upper(), input_type,err_msg))
-                    return result
-                else:
-                    # We have results!
-                    duration = time.time() - stime
-                    current_app.logger.info('Found objects for %s %s in %s user seconds.' % (source.upper(), input_type, duration))
-                    # Now pick the entries in the results that correspond with the original object names
-                    if input_type == 'objects':
-                        result['data'] = {k: result['data'].get(k.upper()) for k in identifiers}
-                    # Send back the results
-                    return result.get('data',{})
-            else:
-                # This should never happen
-                current_app.logger.error('No data found, even though we had %s! Should never happen!'%input_type)
-                result = {
-                    "Error": "Failed to find data for %s %s query!"%(source.upper(), input_type),
-                    "Error Info": "No results found, where results were expected! Needs attention!"
-                    }
-                return result
+        # We have a known object data source and a list of identifiers. Let's start!
+        # We have identifiers
+        if source == 'simbad':
+            result = get_simbad_data(identifiers, input_type)
+        else:
+            if input_type == 'identifiers':
+                input_type = 'simple'
+            result = get_ned_data(identifiers, input_type)
+        if 'Error' in result:
+            # An error was returned!
+            err_msg = result['Error Info']
+            current_app.logger.error('Failed to find data for %s %s query (%s)!'%(source.upper(), input_type,err_msg))
+            return result
+        else:
+            # We have results!
+            duration = time.time() - stime
+            current_app.logger.info('Found objects for %s %s in %s user seconds.' % (source.upper(), input_type, duration))
+            # Now pick the entries in the results that correspond with the original object names
+            if input_type == 'objects':
+#                result['data'] = {k: result['data'].get(k.upper()) for k in identifiers}
+                result['data'] = {k: result['data'].get(k) or result['data'].get(k.upper())  for k in identifiers}
+            # Send back the results
+            return result.get('data',{})
 
 class PositionSearch(Resource):
 
@@ -132,15 +123,12 @@ class QuerySearch(Resource):
             query = request.json['query']
             input_type = 'query'
         except:
-            current_app.logger.error('No query was specified for SIMBAD object search')
+            current_app.logger.error('No query was specified for the  object search')
             return {"Error": "Unable to get results!",
                     "Error Info": "No identifiers/objects found in POST body"}, 200
         # If we get the request from BBB, the value of 'query' is actually an array
         if isinstance(query, list):
-            try:
-                solr_query = query[0]
-            except:
-                solr_query = ''
+            solr_query = query[0]
         else:
             solr_query = query
         current_app.logger.info('Received object query: %s'%solr_query)
@@ -155,10 +143,10 @@ class QuerySearch(Resource):
         # If we receive a (Solr) query string, we need to parse out the object names
         try:
             identifiers = get_objects_from_query_string(solr_query)
-        except:
+        except Exception, err:
             current_app.logger.error('Parsing the identifiers out of the query string blew up!')
             return {"Error": "Unable to get results!",
-                    "Error Info": "No objects found in query string"}, 200
+                    "Error Info": "Parsing the identifiers out of the query string blew up! (%s)"%str(err)}, 200
         identifiers = [iden for iden in identifiers if iden.lower() not in ['object',':']]
         # How many object names did we fid?
         id_num = len(identifiers)
@@ -167,7 +155,7 @@ class QuerySearch(Resource):
         # If we did not find any object names, there is nothing to do!
         if id_num == 0:
             return {"Error": "Unable to get results!",
-                    "Error Info": "No identifiers/objects found in POST body"}, 200
+                    "Error Info": "No identifiers/objects found in Solr object query"}, 200
         # Get translations
         simbad_query = ''
         ned_query = ''
@@ -176,29 +164,31 @@ class QuerySearch(Resource):
             name2simbid = {}
             for ident in identifiers:
                 result = get_simbad_data([ident], 'objects')
-                if 'Error' in result:
+                if 'Error' in result or 'data' not in result:
                     # An error was returned!
                     current_app.logger.error('Failed to find data for SIMBAD object {0}!: {1}'.format(ident, result.get('Error Info','NA')))
+                    name2simbid[ident] = 0
                     continue
-                try:  
+                try:
                     SIMBADid =[e.get('id',0) for e in result['data'].values()][0]
                 except:
-                    SIMBADid = '0'
+                    SIMBADid = "0"
                 name2simbid[ident] = SIMBADid
             simbad_query = translate_query(solr_query, identifiers, name2simbid, 'simbid:')
         if target.lower() in ['ned', 'all']:
             name2nedid = {}
             for ident in identifiers:
                 result = get_ned_data([ident], 'objects')
-                if 'Error' in result:
+                if 'Error' in result or 'data' not in result:
                     # An error was returned!
                     current_app.logger.error('Failed to find data for NED object {0}!: {1}'.format(ident, result.get('Error Info','NA')))
+                    name2nedid[ident] = 0
                     continue
-                try:  
+                try:
                     NEDid =[e.get('id',0) for e in result['data'].values()][0]
                 except:
-                    NEDid = '0'
-                name2nedid[ident] = NEDid
+                    NEDid = 0
+                name2nedid[ident] = str(NEDid)
             ned_query = translate_query(solr_query, identifiers, name2nedid, 'nedid:')
 
         if simbad_query and ned_query:

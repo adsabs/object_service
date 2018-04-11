@@ -80,9 +80,24 @@ def isBalanced(s):
             if len(stack)==0:
                 return False
             lastOpen=stack.pop()
-            if (lastOpen, char) not in match:
-                return False
+    # This part only becomes relevant if other entities (like braces) are allowed
+    #        if (lastOpen, char) not in match:
+    #            return False
     return len(stack)==0
+
+def cleanup_query_string(query_string):
+    if "(object:" in query_string:
+        # We have a query of the form
+        # o1(o2(...oN(object:...))...)
+        # with N operators working on "object:", which necessarily means that
+        # there are N closing parentheses.
+        mat = re_operator.search(query_string)
+        operator = mat.group('operator')
+        Nparenth = operator.count('(')
+        remainder = mat.group('rest')
+        if remainder[-Nparenth:] == ")"*Nparenth:
+            query_string = remainder[:-Nparenth]
+    return query_string
 
 def get_objects_from_query_string(qstring):
     # Just in case somebody inserted a space with operators
@@ -90,18 +105,10 @@ def get_objects_from_query_string(qstring):
     balanced = isBalanced(qstring)
     if not balanced:
         return []
-    # Check if "object:" is being offered with an operator working on it
-    if balanced and "(object:" in qstring:
-        # We have a query of the form
-        # o1(o2(...oN(object:...))...)
-        # with N operators working on "object:", which necessarily means that
-        # there are N closing parentheses.
-        mat = re_operator.search(qstring)
-        operator = mat.group('operator')
-        Nparenth = operator.count('(')
-        remainder = mat.group('rest') 
-        if remainder[-Nparenth:] == ")"*Nparenth:
-            qstring = remainder[:-Nparenth]
+    # Do some query string cleanup, if necessary. For example,
+    # check if "object:" is being offered with an operator working on it
+    qstring = cleanup_query_string(qstring)
+    # 
     results = expression.parseString(qstring.replace('&','+'), parseAll=True)[0]
     check = len([e.asList() for e in results if not isinstance(e, basestring)])
     if check == 0:
@@ -130,10 +137,7 @@ def get_objects_from_query_string(qstring):
 def translate_query(id_query, id_list, name2id, solr_field):
     translated_query = id_query.replace('object:', solr_field)
     for oname in id_list:
-        try:
-            object_id = name2id.get(oname)
-        except:
-            object_id = '0'
+        object_id = name2id.get(oname, '0')
         translated_query = translated_query.replace(oname, object_id)
     
     return translated_query
