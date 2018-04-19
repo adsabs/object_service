@@ -1,3 +1,7 @@
+### 1.0.37
+
+* Nedsrv endpoint: provide info when 500 is thrown
+
 ### 1.0.36
 
 * Unittest coverage improvement and code cleanup
