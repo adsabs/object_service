@@ -221,7 +221,8 @@ class ClassicObjectSearch(Resource):
         results = get_NED_refcodes(request.json)
 
         if "Error" in results:
-            current_app.logger.error('Classic Object Search request request blew up')
+            error_info = results.get('Error Info', 'NA')
+            current_app.logger.error('Classic Object Search request request blew up. Error info: %s' % error_info)
             return results, 500
         duration = time.time() - stime
         current_app.logger.info('Classic Object Search request successfully completed in %s real seconds'%duration)
