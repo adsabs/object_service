@@ -1,3 +1,7 @@
+### 1.0.38
+
+* Fix of incorrect urls in log messages
+
 ### 1.0.37
 
 * Nedsrv endpoint: provide info when 500 is thrown
