@@ -126,14 +126,14 @@ def get_NED_refcodes(obj_data):
         try:
             r = requests.post(ned_url, data=json.dumps(payload), headers=headers, timeout=TIMEOUT)
         except (ConnectTimeout, ReadTimeout) as err:
-            current_app.logger.info('NED request to %s timed out! Request took longer than %s second(s)'%(url, TIMEOUT))
+            current_app.logger.info('NED request to %s timed out! Request took longer than %s second(s)'%(ned_url, TIMEOUT))
             return {"Error": "Unable to get results!", "Error Info": "NED request timed out: {0}".format(str(err))}
         except Exception, err:
-            current_app.logger.error("NED request to %s failed (%s)"%(url, err))
+            current_app.logger.error("NED request to %s failed (%s)"%(ned_url, err))
             return {"Error": "Unable to get results!", "Error Info": "NED request failed ({0})".format(err)}
         # Check if we got a 200 status code back
         if r.status_code != 200:
-            current_app.logger.info('NED request to %s failed! Status code: %s'%(url, r.status_code))
+            current_app.logger.info('NED request to %s failed! Status code: %s'%(ned_url, r.status_code))
             return {"Error": "Unable to get results!", "Error Info": "NED returned status %s" % r.status_code}
         # We got a proper response back with data
         ned_data = r.json()
