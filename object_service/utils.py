@@ -3,6 +3,7 @@ from luqum.parser import parser
 from luqum.utils import LuceneTreeTransformer
 from NED import get_ned_data
 from SIMBAD import get_simbad_data
+from flask import current_app, request
 
 
 class ObjectQueryExtractor(LuceneTreeTransformer):
@@ -18,28 +19,28 @@ class ObjectQueryExtractor(LuceneTreeTransformer):
         if isinstance(node.expr, luqum.tree.FieldGroup) or isinstance(node.expr, luqum.tree.Group):
             # We need the following if statement for the case object:("M 81")
             if isinstance(node.expr.expr, luqum.tree.Phrase) or isinstance(node.expr.expr, luqum.tree.Word):
-                self.object_names.append(node.expr.expr.value.replace('"',''))
+                self.object_names.append(node.expr.expr.value.replace('"','').strip())
             # otherwise it is object:("M 81" OR M1)
             else:
                 for o in node.expr.expr.operands:
                     if isinstance(o, luqum.tree.Phrase) or isinstance(o, luqum.tree.Word):
-                        self.object_names.append(o.value.replace('"',''))
+                        self.object_names.append(o.value.replace('"','').strip())
                     else:
                         self.revisit = True
                         self.visit_search_field(o, parents)
         elif isinstance(node.expr, luqum.tree.Word):
             self.object_names.append(node.expr.value)
         elif isinstance(node.expr, luqum.tree.Phrase):
-            self.object_names.append(node.expr.value.replace('"',''))
+            self.object_names.append(node.expr.value.replace('"','').strip())
         else:
             # This section is to capture contents for recursive calls
             if isinstance(node.expr, luqum.tree.Phrase) or isinstance(node.expr, luqum.tree.Word):
-                self.object_names.append(node.expr.expr.value.replace('"',''))
+                self.object_names.append(node.expr.expr.value.replace('"','').strip())
             # otherwise it is object:("M 81" OR M1)
             else:
                 for o in node.expr.operands:
                     if isinstance(o, luqum.tree.Phrase) or isinstance(o, luqum.tree.Word):
-                        self.object_names.append(o.value.replace('"',''))
+                        self.object_names.append(o.value.replace('"','').strip())
                     else:
                         self.revisit = True
                         self.visit_search_field(o, parents)
@@ -73,20 +74,32 @@ def parse_query_string(query_string):
     # We only accept Solr queries with balanced parentheses
     balanced = isBalanced(query_string)
     if not balanced:
+        current_app.logger.error('Unbalanced parentheses found in Solr query: %s'%query_string)        
         return [], []
     # The query string is valid from the parenthese point-of-view
     # First create the query tree
-    query_tree = parser.parse(query_string)
+    try:
+        query_tree = parser.parse(query_string)
+    except Exception, err:
+        current_app.logger.error('Parsing query string blew up: %s'%str(err))
+        return [], []
     # Instantiate the object that will be used to traverse the tree
     # and extract the nodes associated with object: query modifiers
-    extractor = ObjectQueryExtractor()
+    try:
+        extractor = ObjectQueryExtractor()
+    except Exception, err:
+        current_app.logger.error('Initializing object extractor blew up: %s'%str(err))
+        return [], []
     # Running the extractor will populate two lists
     # 
     extractor.object_nodes = []
     extractor.object_names = []
-    extractions = extractor.visit(query_tree)
-#    object_queries = [str(oq) for oq in extractor.object_nodes]
-    return extractor.object_names, extractor.object_nodes
+    try:
+        extractions = extractor.visit(query_tree)
+    except Exception, err:
+        current_app.logger.error('Extracting object names blew up: %s'%str(err))
+        return [], []
+    return [on for on in extractor.object_names if on.strip()], extractor.object_nodes
 
 def get_object_data(identifiers, service):
     if service == 'simbad':

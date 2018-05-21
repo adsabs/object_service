@@ -1,3 +1,7 @@
+### 1.0.40
+
+* Some minor bug fixes to deal with pathological erroneous queries
+
 ### 1.0.39
 
 * Implementation of new query parsing method using the luqum (LUcene QUery Manipolator) module

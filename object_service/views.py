@@ -148,6 +148,10 @@ class QuerySearch(Resource):
             current_app.logger.error('Parsing the identifiers out of the query string blew up!')
             return {"Error": "Unable to get results!",
                     "Error Info": "Parsing the identifiers out of the query string blew up! (%s)"%str(err)}, 200
+        # If no object names were found, return
+        if len(object_names) == 0:
+            return {"Error": "Unable to get results!",
+                    "Error Info": "No identifiers/objects found in Solr object query"}, 200
         # Create the translation map from the object names provided to identifiers indexed in Solr (simbid and nedid)
         name2id = get_object_translations(object_names, targets)
         # Now we have all necessary information to created the translated query
