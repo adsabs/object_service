@@ -14,8 +14,6 @@ class ObjectQueryExtractor(LuceneTreeTransformer):
             else:
                 self.revisit = False
                 self.object_nodes.append(str(node))
-#        if node.name == 'object':
-#            self.object_nodes.append(str(node))
         if isinstance(node.expr, luqum.tree.FieldGroup) or isinstance(node.expr, luqum.tree.Group):
             # We need the following if statement for the case object:("M 81")
             if isinstance(node.expr.expr, luqum.tree.Phrase) or isinstance(node.expr.expr, luqum.tree.Word):
@@ -85,11 +83,7 @@ def parse_query_string(query_string):
         return [], []
     # Instantiate the object that will be used to traverse the tree
     # and extract the nodes associated with object: query modifiers
-    try:
-        extractor = ObjectQueryExtractor()
-    except Exception, err:
-        current_app.logger.error('Initializing object extractor blew up: %s'%str(err))
-        return [], []
+    extractor = ObjectQueryExtractor()
     # Running the extractor will populate two lists
     # 
     extractor.object_nodes = []
@@ -108,7 +102,7 @@ def get_object_data(identifiers, service):
         object_data = get_ned_data(identifiers, 'objects')
     else:
         object_data = {'Error':'Unable to get object data', 
-                       'Error':'Do not have method to get object data for this service: {0}'.format(service)}
+                       'Error Info':'Do not have method to get object data for this service: {0}'.format(service)}
     return object_data
 
 def get_object_translations(onames, trgts):
@@ -153,7 +147,7 @@ def translate_query(solr_query, oqueries, trgts, onames, translations):
         simbad_query = oquery.replace('object:','simbid:')
         ned_query    = oquery.replace('object:','nedid:')
         for oname in onames:
-            if oquery.find(oquery) == -1:
+            if solr_query.find(oquery) == -1:
                 continue
             simbad_query = simbad_query.replace(oname, translations['simbad'].get(oname,"0"))
             ned_query = ned_query.replace(oname, translations['ned'].get(oname,"0"))

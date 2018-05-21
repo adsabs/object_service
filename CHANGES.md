@@ -1,3 +1,7 @@
+### 1.0.41
+
+* Maintenance release (improved unittest coverage)
+
 ### 1.0.40
 
 * Some minor bug fixes to deal with pathological erroneous queries

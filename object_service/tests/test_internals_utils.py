@@ -36,7 +36,7 @@ class TestDataRetrieval(TestCase):
         test = ')x('
         self.assertFalse(isBalanced(test))
 
-    def test_parse_query_string(self):
+    def test_parse_query_string_unbalanced(self):
         '''Check is query string is parsed correctly'''
         from object_service.utils import parse_query_string
         # Unbalanced parentheses should return an empty list
@@ -44,6 +44,40 @@ class TestDataRetrieval(TestCase):
         object_names, object_queries = parse_query_string(unbalanced)
         self.assertEqual(object_names, [])
         self.assertEqual(object_queries, [])
+    
+    def test_parse_query_string(self):
+        '''Check is query string is parsed correctly'''
+        from object_service.utils import parse_query_string
+        qstring = 'citations(object:((Andromeda OR LMC) AND M1) OR fulltext:SMC) year:2010 property:refereed object:foo'
+        object_names, object_queries = parse_query_string(qstring)
+        self.assertEqual(object_names, ['Andromeda', 'LMC', 'M1','foo'])
+        self.assertEqual(object_queries, ['object:((Andromeda OR LMC) AND M1)','object:foo'])
+    
+    def test_parse_query_string_empty(self):
+        '''Check is query string is parsed correctly'''
+        from object_service.utils import parse_query_string
+        # Unbalanced parentheses should return an empty list
+        empty = 'object:""'
+        object_names, object_queries = parse_query_string(empty)
+        self.assertEqual(object_names, [])
+
+    def test_parse_query_parse_error(self):
+        '''Check is query string is parsed correctly'''
+        from object_service.utils import parse_query_string
+        # Unbalanced parentheses should return an empty list
+        empty = 'object:()'
+        object_names, object_queries = parse_query_string(empty)
+        self.assertEqual(object_names, [])
+
+    def test_invalid_service(self):
+        '''Any target service other than SIMBAD or NED is not accepted'''
+        from object_service.utils import get_object_data
+        service = 'BAR'
+        result = get_object_data(['foo'], service)
+        expected = {'Error':'Unable to get object data',
+                    'Error Info':'Do not have method to get object data for this service: {0}'.format(service)}
+
+        self.assertEqual(result, expected)
 
 if __name__ == '__main__':
     unittest.main()
