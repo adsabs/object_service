@@ -36,45 +36,14 @@ class TestDataRetrieval(TestCase):
         test = ')x('
         self.assertFalse(isBalanced(test))
 
-    def test_query_string_cleanup(self):
-        '''Check is query string gets cleaned up correctly'''
-        from object_service.utils import cleanup_query_string
-        # First a query string that should not change
-        query_string = "object:((LMC OR SMC) AND Andromeda) year:2015 property:refereed"
-        result = cleanup_query_string(query_string)
-        self.assertEqual(result, query_string)        
-        # Now one that needs cleanup
-        embedded_string = "trending(citations(object:((LMC OR SMC) AND Andromeda) year:2015 property:refereed))"
-        result = cleanup_query_string(embedded_string)
-        self.assertEqual(result, query_string)
-
     def test_parse_query_string(self):
         '''Check is query string is parsed correctly'''
-        from object_service.utils import get_objects_from_query_string
+        from object_service.utils import parse_query_string
         # Unbalanced parentheses should return an empty list
         unbalanced = 'trending(references(citations(object:(Andromeda OR LMC AND M1)))'
-        result = get_objects_from_query_string(unbalanced)
-        self.assertEqual(result, [])
+        object_names, object_queries = parse_query_string(unbalanced)
+        self.assertEqual(object_names, [])
+        self.assertEqual(object_queries, [])
 
-    def test_solr_query_translation(self):
-        '''Check if original Solr query gets translated correctly'''
-        from object_service.utils import translate_query
-        # Original query
-        solr_query = "bibstem:A&A object:((Andromeda OR SMC) AND LMC) year:2015"
-        # Objects parsed from query
-        identifiers= ['Andromeda', 'SMC', 'LMC']
-        # SIMBAD data (translation from object name to SIMBAD identifier)
-        name2simbid = {u'SMC': '3253618', u'LMC': '3133169', u'Andromeda': '1575544'}
-        # Translate the query
-        translated_query = translate_query(solr_query, identifiers, name2simbid, 'simbid:')
-        # What are we expecting to get back?
-        expected = "bibstem:A&A simbid:((1575544 OR 3253618) AND 3133169) year:2015"
-        # Did we get that back?
-        self.assertEqual(translated_query, expected)
-        # Do something similar for NED
-        name2nedid = {'SMC': 'Small_Magellanic_Cloud', 'LMC': 'Large_Magellanic_Cloud', 'Andromeda': '0'}
-        translated_query = translate_query(solr_query, identifiers, name2nedid, 'nedid:')
-        expected = "bibstem:A&A nedid:((0 OR Small_Magellanic_Cloud) AND Large_Magellanic_Cloud) year:2015"
-        self.assertEqual(translated_query, expected)
 if __name__ == '__main__':
     unittest.main()

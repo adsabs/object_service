@@ -1,3 +1,14 @@
+### 1.0.39
+
+* Implementation of new query parsing method using the luqum (LUcene QUery Manipolator) module
+  * luqum credentials: developed by Jurismarchés (https://github.com/jurismarches/luqum)
+  * License: GNU General Public License v3.0
+  * the module has been adapted to be compatible with Python 2.7
+* The luqum module is used to create a query tree from the Solr query string to identify the object: modifiers
+* This fixes the bug that e.g. "object:Andromeda OR abs:Andromeda" gets translated into "simbid:123 OR 0:123"
+* Enhancement: an object: query is now translated into an OR of simbid:, nedid: and abs: queries, with
+  database:astronomy as restriction
+
 ### 1.0.38
 
 * Fix of incorrect urls in log messages

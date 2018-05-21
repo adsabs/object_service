@@ -28,4 +28,4 @@ def create_app():
     return app
 
 if __name__ == "__main__":
-    run_simple('0.0.0.0', 5555, create_app(), use_reloader=False, use_debugger=False)
+    run_simple('0.0.0.0', 5555, create_app(), use_reloader=True, use_debugger=False)
