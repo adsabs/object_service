@@ -1,65 +1,49 @@
-import re
-from pyparsing import (Literal, CaselessKeyword, Forward, Regex, QuotedString, Suppress,
-    Optional, Group, FollowedBy, infixNotation, opAssoc, ParseException, ParserElement)
-ParserElement.enablePackrat()
+import luqum
+from luqum.parser import parser
+from luqum.utils import LuceneTreeTransformer
+from NED import get_ned_data
+from SIMBAD import get_simbad_data
 
-re_operator = re.compile(r'''^(?P<operator>.*?\()(?P<rest>object:.*)''')
 
-COLON,LBRACK,RBRACK,LBRACE,RBRACE,TILDE,CARAT = map(Literal,":[]{}~^")
-LPAR,RPAR = map(Suppress,"()")
-and_ = CaselessKeyword("AND")
-or_ = CaselessKeyword("OR")
-not_ = CaselessKeyword("NOT")
-to_ = CaselessKeyword("TO")
-keyword = and_ | or_ | not_
-
-expression = Forward()
-
-valid_word = Regex(r'([a-zA-Z0-9*_+.-]|\\[!(){}\[\]^"~*?\\:])+').setName("word")
-valid_word.setParseAction(
-    lambda t : t[0].replace('\\\\',chr(127)).replace('\\','').replace(chr(127),'\\')
-    )
-
-string = QuotedString('"')
-
-required_modifier = Literal("+")("required")
-prohibit_modifier = Literal("-")("prohibit")
-integer = Regex(r"\d+").setParseAction(lambda t:int(t[0]))
-proximity_modifier = Group(TILDE + integer("proximity"))
-number = Regex(r'\d+(\.\d+)?').setParseAction(lambda t:float(t[0]))
-fuzzy_modifier = TILDE + Optional(number, default=0.5)("fuzzy")
-
-term = Forward()
-field_name = valid_word.copy().setName("fieldname")
-incl_range_search = Group(LBRACK + term("lower") + to_ + term("upper") + RBRACK)
-excl_range_search = Group(LBRACE + term("lower") + to_ + term("upper") + RBRACE)
-range_search = incl_range_search("incl_range") | excl_range_search("excl_range")
-boost = (CARAT + number("boost"))
-
-string_expr = Group(string + proximity_modifier) | string
-word_expr = Group(valid_word + fuzzy_modifier) | valid_word
-term << (Optional(field_name("field") + COLON) + 
-         (word_expr | string_expr | range_search | Group(LPAR + expression + RPAR)) +
-         Optional(boost))
-term.setParseAction(lambda t:[t] if 'field' in t or 'boost' in t else None)
-    
-expression << infixNotation(term,
-    [
-    (required_modifier | prohibit_modifier, 1, opAssoc.RIGHT),
-    ((not_ | '!').setParseAction(lambda:"NOT"), 1, opAssoc.RIGHT),
-    ((and_ | '&&').setParseAction(lambda:"AND"), 2, opAssoc.LEFT),
-    (Optional(or_ | '||').setParseAction(lambda:"OR"), 2, opAssoc.LEFT),
-    ])
-
-def flatten(lis):
-    """Given a list, possibly nested to any level, return it flattened."""
-    new_lis = []
-    for item in lis:
-        if type(item) == type([]):
-            new_lis.extend(flatten(item))
+class ObjectQueryExtractor(LuceneTreeTransformer):
+    def visit_search_field(self, node, parents):
+        if isinstance(node, luqum.tree.SearchField):
+            if node.name != 'object':
+                return node
+            else:
+                self.revisit = False
+                self.object_nodes.append(str(node))
+#        if node.name == 'object':
+#            self.object_nodes.append(str(node))
+        if isinstance(node.expr, luqum.tree.FieldGroup) or isinstance(node.expr, luqum.tree.Group):
+            # We need the following if statement for the case object:("M 81")
+            if isinstance(node.expr.expr, luqum.tree.Phrase) or isinstance(node.expr.expr, luqum.tree.Word):
+                self.object_names.append(node.expr.expr.value.replace('"',''))
+            # otherwise it is object:("M 81" OR M1)
+            else:
+                for o in node.expr.expr.operands:
+                    if isinstance(o, luqum.tree.Phrase) or isinstance(o, luqum.tree.Word):
+                        self.object_names.append(o.value.replace('"',''))
+                    else:
+                        self.revisit = True
+                        self.visit_search_field(o, parents)
+        elif isinstance(node.expr, luqum.tree.Word):
+            self.object_names.append(node.expr.value)
+        elif isinstance(node.expr, luqum.tree.Phrase):
+            self.object_names.append(node.expr.value.replace('"',''))
         else:
-            new_lis.append(item)
-    return new_lis
+            # This section is to capture contents for recursive calls
+            if isinstance(node.expr, luqum.tree.Phrase) or isinstance(node.expr, luqum.tree.Word):
+                self.object_names.append(node.expr.expr.value.replace('"',''))
+            # otherwise it is object:("M 81" OR M1)
+            else:
+                for o in node.expr.operands:
+                    if isinstance(o, luqum.tree.Phrase) or isinstance(o, luqum.tree.Word):
+                        self.object_names.append(o.value.replace('"',''))
+                    else:
+                        self.revisit = True
+                        self.visit_search_field(o, parents)
+        return node
 
 def isBalanced(s):
     """
@@ -85,59 +69,85 @@ def isBalanced(s):
     #            return False
     return len(stack)==0
 
-def cleanup_query_string(query_string):
-    if "(object:" in query_string:
-        # We have a query of the form
-        # o1(o2(...oN(object:...))...)
-        # with N operators working on "object:", which necessarily means that
-        # there are N closing parentheses.
-        mat = re_operator.search(query_string)
-        operator = mat.group('operator')
-        Nparenth = operator.count('(')
-        remainder = mat.group('rest')
-        if remainder[-Nparenth:] == ")"*Nparenth:
-            query_string = remainder[:-Nparenth]
-    return query_string
-
-def get_objects_from_query_string(qstring):
-    # Just in case somebody inserted a space with operators
-    qstring = re.sub('\(\s+','(object:', qstring)
-    balanced = isBalanced(qstring)
+def parse_query_string(query_string):
+    # We only accept Solr queries with balanced parentheses
+    balanced = isBalanced(query_string)
     if not balanced:
-        return []
-    # Do some query string cleanup, if necessary. For example,
-    # check if "object:" is being offered with an operator working on it
-    qstring = cleanup_query_string(qstring)
+        return [], []
+    # The query string is valid from the parenthese point-of-view
+    # First create the query tree
+    query_tree = parser.parse(query_string)
+    # Instantiate the object that will be used to traverse the tree
+    # and extract the nodes associated with object: query modifiers
+    extractor = ObjectQueryExtractor()
+    # Running the extractor will populate two lists
     # 
-    results = expression.parseString(qstring.replace('&','+'), parseAll=True)[0]
-    check = len([e.asList() for e in results if not isinstance(e, basestring)])
-    if check == 0:
-        # Query string one of these cases
-        #  1. object:<name>
-        #  2. object:"<string, possibly with Boolean operators"
-        objlist = results[-1].replace(' AND ','$').replace(' OR ','$').split('$')
-    elif check == 1:
-        # Query string is of the following form
-        #  1. object:(<expression, possibly nested>)
-        tmp = [e.asList() for e in results if not isinstance(e, basestring)]
-        objlist = [o for o in flatten(tmp) if o not in ['OR','AND']]
-    else:
-        # We are left with cases with additional modifiers
-        tmp = [e.asList() for e in results if not isinstance(e, basestring) and 'object' in flatten(e.asList())]
-        objs = [o for o in flatten(tmp) if o not in ['OR','AND',':','object']]
-#        tmp = [e.asList() for e in results if not isinstance(e, basestring) and 'object' in e.values()]
-#        objs = [o for o in flatten(tmp) if o not in ['OR','AND',':','object']]
-        if 'object:"' in qstring:
-            # In this case we have to be careful that object string could contain Boolean operators
-            objlist =  flatten([o.replace(' AND ','$').replace(' OR ','$').split('$') for o in objs])
-        else:
-            objlist = objs
-    return objlist
+    extractor.object_nodes = []
+    extractor.object_names = []
+    extractions = extractor.visit(query_tree)
+#    object_queries = [str(oq) for oq in extractor.object_nodes]
+    return extractor.object_names, extractor.object_nodes
 
-def translate_query(id_query, id_list, name2id, solr_field):
-    translated_query = id_query.replace('object:', solr_field)
-    for oname in id_list:
-        object_id = name2id.get(oname, '0')
-        translated_query = translated_query.replace(oname, object_id)
-    
-    return translated_query
+def get_object_data(identifiers, service):
+    if service == 'simbad':
+        object_data = get_simbad_data(identifiers, 'objects')
+    elif service == 'ned':
+        object_data = get_ned_data(identifiers, 'objects')
+    else:
+        object_data = {'Error':'Unable to get object data', 
+                       'Error':'Do not have method to get object data for this service: {0}'.format(service)}
+    return object_data
+
+def get_object_translations(onames, trgts):
+    # initialize with empty map
+    idmap = {}
+    for trgt in trgts:
+        idmap[trgt] = {}
+        for oname in onames:
+            idmap[trgt][oname] = "0"
+    # now get the object translations for the targets specified
+    for trgt in trgts:
+        for oname in onames:
+            result = get_object_data([oname], trgt)
+            if 'Error' in result or 'data' not in result:
+                # An error was returned!
+                current_app.logger.error('Failed to find data for {0} object {1}!: {2}'.format(trgt.upper(), ident, result.get('Error Info','NA')))
+                continue
+            try:
+                idmap[trgt][oname] =[e.get('id',0) for e in result['data'].values()][0]
+            except:
+                continue
+            
+    return idmap
+
+def translate_query(solr_query, oqueries, trgts, onames, translations):
+    # The goal is to translate the original Solr query with the embedded
+    # "object:" queries into a Solr query with actual Solr fields
+    # (nedid:, simbid:) and to include an "abs:" query to simulate the
+    # "ADS Objects" search from ADS Classic. The following will be the general patterns
+    # a. single object name:
+    #      object:Andromeda    --> (simbid:translations['simbid'].get("Andromeda","0") OR nedid:translations['nedid'].get("Andromeda","0") OR abs:"Andromeda") database:astronomy
+    # b. object name as phrase
+    #      object:"Large Magellanic Cloud"  --> same idea as under a.
+    # c. object query as expression
+    #      object:(Boolean expression) like object:(("51 Peg b" OR 16CygB) AND Osiris) -->
+    #      (simbid:(boolean expression of simbid translations) OR nedid:(boolean expression of nedid translations) OR abs:(original boolean)) database:astronomy
+    # The approach is then
+    # For each of the N object query components O_i (i=1,...,N) parsed out of the original Solr query S, create their translated equivalent
+    # T_i (i=1,...,N) and do a replacement S.replace(O_i, T_i)
+    for oquery in oqueries:
+        query_components = [oquery.replace('object:','abs:')]
+        simbad_query = oquery.replace('object:','simbid:')
+        ned_query    = oquery.replace('object:','nedid:')
+        for oname in onames:
+            if oquery.find(oquery) == -1:
+                continue
+            simbad_query = simbad_query.replace(oname, translations['simbad'].get(oname,"0"))
+            ned_query = ned_query.replace(oname, translations['ned'].get(oname,"0"))
+        if "simbad" in trgts:
+            query_components.append(simbad_query)
+        if "ned" in trgts:
+            query_components.append(ned_query)
+        translated_query = "(({0}) database:astronomy)".format(" OR ".join(query_components))
+        solr_query = solr_query.replace(oquery, "(({0}) database:astronomy)".format(" OR ".join(query_components)))
+    return solr_query

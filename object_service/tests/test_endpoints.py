@@ -82,6 +82,7 @@ class TestExpectedResults(TestCase):
             content_type='application/json',
             data=json.dumps({'identifiers': identifiers}))
         # See if we received the expected results
+        print r.json
         self.assertEqual(r.json['Error'], 'Unable to get results!')
         self.assertEqual(r.json['Error Info'], 'Bad data returned by SIMBAD')
 
@@ -236,7 +237,7 @@ class TestExpectedResults(TestCase):
             data=json.dumps({'query': query}))
         # The response should have a status code 200
         # See if we received the expected results
-        expected = {'query': '(bibstem:A&A simbid:1575544 year:2015) OR (bibstem:A&A nedid:Andromeda year:2015)'}
+        expected = {'query': 'bibstem:A&A ((abs:Andromeda OR simbid:1575544 OR nedid:Andromeda) database:astronomy) year:2015'}
         self.assertEqual(r.json, expected)
 
     @httpretty.activate
@@ -273,7 +274,7 @@ class TestExpectedResults(TestCase):
             data=json.dumps({'query': query}))
         # The response should have a status code 200
         # See if we received the expected results
-        expected = {'query': '(bibstem:A&A simbid:1575544 year:2015) OR (bibstem:A&A nedid:Andromeda year:2015)'}
+        expected = {'query': 'bibstem:A&A ((abs:Andromeda OR simbid:1575544 OR nedid:Andromeda) database:astronomy) year:2015'}
         self.assertEqual(r.json, expected)
 
     def test_object_search_empty_query(self):
@@ -305,20 +306,6 @@ class TestExpectedResults(TestCase):
         # See if we received the expected results
         expected = {"Error": "Unable to get results!",
                 "Error Info": 'Parsing the identifiers out of the query string blew up! (Something went wrong!)'}
-        self.assertEqual(r.json, expected)
-
-    @mock.patch('object_service.utils.flatten', return_value=[])
-    def test_query_search_parsing_error(self, mock_get_objects_from_query_string):
-        query = 'bibstem:A&A object:Andromeda year:2015'
-        r = self.client.post(
-            url_for('querysearch'),
-            content_type='application/json',
-            data=json.dumps({'query': query}))
-        # The response should have a status code 200
-        self.assertTrue(r.status_code == 200)
-        # See if we received the expected results
-        expected = {"Error": "Unable to get results!",
-                "Error Info": 'No identifiers/objects found in Solr object query'}
         self.assertEqual(r.json, expected)
 
     def test_object_search_unknown_source(self):

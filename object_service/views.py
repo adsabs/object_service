@@ -7,8 +7,12 @@ from SIMBAD import do_position_query
 from SIMBAD import parse_position_string
 from NED import get_ned_data
 from NED import get_NED_refcodes
-from utils import get_objects_from_query_string
+
+from utils import parse_query_string
+from utils import get_object_translations
 from utils import translate_query
+from utils import isBalanced
+
 import time
 import timeout_decorator
 
@@ -115,7 +119,6 @@ class QuerySearch(Resource):
     def post(self):
         stime = time.time()
         # Get the supplied list of identifiers
-        identifiers = []
         query = None
         itype = None
         name2id = {}
@@ -131,74 +134,24 @@ class QuerySearch(Resource):
             solr_query = query[0]
         else:
             solr_query = query
+        translated_query = solr_query
         current_app.logger.info('Received object query: %s'%solr_query)
-        # This query will be split up into two components: a SIMBAD and a NED object query
-        simbad_query = solr_query.replace('object:','simbid:')
-        ned_query = solr_query.replace('object:','nedid:')
         # Check if an explicit target service was specified
         try:
-            target = request.json['target']
+            targets = [t.strip() for t in request.json['target'].lower().split(',')]
         except:
-            target = 'all'
-        # If we receive a (Solr) query string, we need to parse out the object names
+            targets = ['simbad', 'ned']
+        # Get the object names and individual object queries from the Solr query
         try:
-            identifiers = get_objects_from_query_string(solr_query)
+            object_names, object_queries = parse_query_string(solr_query)
         except Exception, err:
             current_app.logger.error('Parsing the identifiers out of the query string blew up!')
             return {"Error": "Unable to get results!",
                     "Error Info": "Parsing the identifiers out of the query string blew up! (%s)"%str(err)}, 200
-        identifiers = [iden for iden in identifiers if iden.lower() not in ['object',':']]
-        # How many object names did we fid?
-        id_num = len(identifiers)
-        # Keep a list with the object names we found
-        identifiers_orig = identifiers
-        # If we did not find any object names, there is nothing to do!
-        if id_num == 0:
-            return {"Error": "Unable to get results!",
-                    "Error Info": "No identifiers/objects found in Solr object query"}, 200
-        # Get translations
-        simbad_query = ''
-        ned_query = ''
-        translated_query = ''
-        if target.lower() in ['simbad', 'all']:
-            name2simbid = {}
-            for ident in identifiers:
-                result = get_simbad_data([ident], 'objects')
-                if 'Error' in result or 'data' not in result:
-                    # An error was returned!
-                    current_app.logger.error('Failed to find data for SIMBAD object {0}!: {1}'.format(ident, result.get('Error Info','NA')))
-                    name2simbid[ident] = 0
-                    continue
-                try:
-                    SIMBADid =[e.get('id',0) for e in result['data'].values()][0]
-                except:
-                    SIMBADid = "0"
-                name2simbid[ident] = SIMBADid
-            simbad_query = translate_query(solr_query, identifiers, name2simbid, 'simbid:')
-        if target.lower() in ['ned', 'all']:
-            name2nedid = {}
-            for ident in identifiers:
-                result = get_ned_data([ident], 'objects')
-                if 'Error' in result or 'data' not in result:
-                    # An error was returned!
-                    current_app.logger.error('Failed to find data for NED object {0}!: {1}'.format(ident, result.get('Error Info','NA')))
-                    name2nedid[ident] = 0
-                    continue
-                try:
-                    NEDid =[e.get('id',0) for e in result['data'].values()][0]
-                except:
-                    NEDid = 0
-                name2nedid[ident] = str(NEDid)
-            ned_query = translate_query(solr_query, identifiers, name2nedid, 'nedid:')
-
-        if simbad_query and ned_query:
-            translated_query = '({0}) OR ({1})'.format(simbad_query, ned_query)
-        elif simbad_query:
-            translated_query = simbad_query
-        elif ned_query:
-            translated_query = ned_query
-        else:
-            translated_query = 'simbid:0'
+        # Create the translation map from the object names provided to identifiers indexed in Solr (simbid and nedid)
+        name2id = get_object_translations(object_names, targets)
+        # Now we have all necessary information to created the translated query
+        translated_query = translate_query(solr_query, object_queries, targets, object_names, name2id)
  
         return {'query': translated_query}        
 
