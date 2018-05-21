@@ -1,4 +1,17 @@
 
 [run]
 source = object_service
-omit = object_service/tests*
+omit = 
+    # omit any test modules in the unittest directory
+    object_service/tests*
+    # omit local_config
+    */local_config.py
+    # omit __init__.py files
+    */__init__.py
+    # omit luqum files
+    */luqum/*
+
+[report]
+exclude_lines =
+    # Don't complain if non-runnable code isn't run
+    if __name__ == .__main__.:
