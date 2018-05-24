@@ -118,7 +118,7 @@ def get_object_translations(onames, trgts):
             result = get_object_data([oname], trgt)
             if 'Error' in result or 'data' not in result:
                 # An error was returned!
-                current_app.logger.error('Failed to find data for {0} object {1}!: {2}'.format(trgt.upper(), ident, result.get('Error Info','NA')))
+                current_app.logger.error('Failed to find data for {0} object {1}!: {2}'.format(trgt.upper(), oname, result.get('Error Info','NA')))
                 continue
             try:
                 idmap[trgt][oname] =[e.get('id',0) for e in result['data'].values()][0]

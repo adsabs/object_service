@@ -1,3 +1,7 @@
+### 1.0.42
+
+* Maintenance release (bug in error message)
+
 ### 1.0.41
 
 * Maintenance release (improved unittest coverage)
