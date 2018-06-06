@@ -1,3 +1,8 @@
+### 1.0.43
+
+* Unittest coverage improvement
+* Cone search support
+
 ### 1.0.42
 
 * Maintenance release (bug in error message)

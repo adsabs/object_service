@@ -353,6 +353,63 @@ class TestDataRetrieval(TestCase):
         self.assertDictEqual(result, expected)
 
     @httpretty.activate
+    def test_get_simbad_position_query_timeout(self):
+        '''Test to see if SIMBAD position query method behaves as expected'''
+        from object_service.SIMBAD import simbad_position_query
+
+        def exceptionCallback(request, uri, headers):
+            raise ReadTimeout('Connection timed out.')
+
+        identifiers = ["3133169", "1575544"]
+        self.app.config['OBJECTS_SIMBAD_TIMEOUT'] = 1
+        QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
+        httpretty.register_uri(
+            httpretty.POST, QUERY_URL,
+            body=exceptionCallback)
+        result = simbad_position_query(11.1, 11.1, 0.1)
+        expected = {'Error Info': 'SIMBAD position query timed out: Connection timed out.', 'Error': 'Unable to get results!'}
+
+        self.assertDictEqual(result, expected)
+
+    @httpretty.activate
+    def test_get_ned_position_query_timeout(self):
+        '''Test to see if NED position query method behaves as expected'''
+        from object_service.NED import ned_position_query
+
+        def exceptionCallback(request, uri, headers):
+            raise ReadTimeout('Connection timed out.')
+
+        identifiers = ["3133169", "1575544"]
+        self.app.config['OBJECTS_SIMBAD_TIMEOUT'] = 1
+        QUERY_URL = self.app.config.get('OBJECTS_NED_OBJSEARCH')
+        httpretty.register_uri(
+            httpretty.GET, QUERY_URL,
+            body=exceptionCallback)
+        result = ned_position_query(11.1, 11.1, 0.1)
+        expected = {'Error Info': 'NED cone search timed out: Connection timed out.', 'Error': 'Unable to get results!'}
+
+        self.assertDictEqual(result, expected)
+
+    @httpretty.activate
+    def test_get_ned_position_query_exception(self):
+        '''Test to see if NED position query method behaves as expected'''
+        from object_service.NED import ned_position_query
+
+        def exceptionCallback(request, uri, headers):
+            raise Exception('Houston, we have a problem!')
+
+        identifiers = ["3133169", "1575544"]
+        self.app.config['OBJECTS_SIMBAD_TIMEOUT'] = 1
+        QUERY_URL = self.app.config.get('OBJECTS_NED_OBJSEARCH')
+        httpretty.register_uri(
+            httpretty.GET, QUERY_URL,
+            body=exceptionCallback)
+        result = ned_position_query(11.1, 11.1, 0.1)
+        expected = {'Error Info': 'NED cone search failed (Houston, we have a problem!)', 'Error': 'Unable to get results!'}
+
+        self.assertDictEqual(result, expected)
+
+    @httpretty.activate
     def test_get_simbad_objects_exception(self):
         '''Test to see if retrieval of SIMBAD objects method behaves as expected'''
         from object_service.SIMBAD import get_simbad_data
@@ -373,8 +430,8 @@ class TestDataRetrieval(TestCase):
     @httpretty.activate
     def test_do_cone_search(self):
         '''Test to see if SIMBAD cone search method behaves as expected'''
-        from object_service.SIMBAD import parse_position_string
-        from object_service.SIMBAD import do_position_query
+        from object_service.utils import parse_position_string
+        from object_service.SIMBAD import simbad_position_query
         pstring = "80.89416667 -69.75611111:0.166666"
         mockdata = {"data":[["2003A&A...405..111G"],["2011AcA....61..103G"]]}
         QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
@@ -385,16 +442,16 @@ class TestDataRetrieval(TestCase):
             body='%s'%json.dumps(mockdata))
         # First parse the position string and see we if get the expected results back
         RA, DEC, radius = parse_position_string(pstring)
-        self.assertEqual([RA, DEC, radius], [80.89416667,-69.75611111,'0.166666'])
+        self.assertEqual([RA, DEC, radius], ['80.8942','-69.7561',0.166666])
         # Next query with this positional information
-        result = do_position_query(RA, DEC, radius)
-        expected = {'data': [u'2011AcA....61..103G', u'2003A&A...405..111G']}
+        result = simbad_position_query(RA, DEC, radius)
+        expected = [u'2011AcA....61..103G', u'2003A&A...405..111G']
         self.assertEqual(result, expected)
 
     @httpretty.activate
     def test_do_cone_search_exception(self):
         '''Test to see if SIMBAD cone search method behaves as expected'''
-        from object_service.SIMBAD import do_position_query
+        from object_service.SIMBAD import simbad_position_query
         
         def exceptionCallback(request, uri, headers):
             raise Exception('Oops! Something went boink!')
@@ -408,14 +465,14 @@ class TestDataRetrieval(TestCase):
             status=200,
             body=exceptionCallback)
         # First parse the position string and see we if get the expected results back
-        result = do_position_query(80.89416667, -69.7561111, 0.2)
-        expected = {'Error': 'Unable to get results from http://simbad.u-strasbg.fr/simbad/sim-tap/sync!', 'Error Info': 'SIMBAD query blew up (Oops! Something went boink!)'}
+        result = simbad_position_query(80.89416667, -69.7561111, 0.2)
+        expected = {'Error Info': 'SIMBAD position query blew up (Oops! Something went boink!)', 'Error': u'Unable to get results from http://simbad.u-strasbg.fr/simbad/sim-tap/sync!'}
         self.assertDictEqual(result, expected)
 
     @httpretty.activate
     def test_do_cone_search_malformed_response(self):
         '''Test to see if SIMBAD cone search method behaves as expected'''
-        from object_service.SIMBAD import do_position_query
+        from object_service.SIMBAD import simbad_position_query
         
         def exceptionCallback(request, uri, headers):
             raise Exception('Oops! Something went boink!')
@@ -429,47 +486,43 @@ class TestDataRetrieval(TestCase):
             status=200,
             body='%s'%json.dumps(mockdata))
         # First parse the position string and see we if get the expected results back
-        result = do_position_query(80.89416667, -69.7561111, 0.2)
-        expected = {'Error': 'Unable to get results!', 'Error Info': 'Unable to retrieve bibcodes from SIMBAD response (no "data" key)!'}
+        result = simbad_position_query(80.89416667, -69.7561111, 0.2)
+        expected = {'Error Info': 'Unable to retrieve SIMBAD identifiers from SIMBAD response (no "data" key)!', 'Error': 'Unable to get results!'}
         self.assertDictEqual(result, expected)
 
     def test_parse_position_string_default_radius(self):
         '''Test to see if SIMBAD cone search method interprets position string correctly'''
-        from object_service.SIMBAD import parse_position_string
-        from object_service.SIMBAD import IncorrectPositionFormatError
+        from object_service.utils import parse_position_string
+        from object_service.utils import IncorrectPositionFormatError
 
         pstring = "80.89416667 -69.75611111:0.166666"
         # Get the value of the default radius
         default_radius = self.app.config.get('OBJECTS_DEFAULT_RADIUS')
         # First parse the position string and see we if get the expected results back
         RA, DEC, radius = parse_position_string(pstring)
-        self.assertEqual([RA, DEC, radius], [80.89416667,-69.75611111, '0.166666'])
+        self.assertEqual([RA, DEC, radius], [u'80.8942', u'-69.7561', 0.166666])
         # An invalid radius results in the the default radius
         pstring = "80.89416667 -69.75611111:1 2 3 4"
         RA, DEC, radius = parse_position_string(pstring)
-        self.assertEqual([RA, DEC, radius], [80.89416667,-69.75611111, default_radius])
+        self.assertEqual([RA, DEC, radius], [u'80.8942', u'-69.7561', default_radius])
         # Check if the hms to decimal conversion works as expected
-        pstring = "80.89416667 -69.75611111:1 60 3600"
+        pstring = "80.89416667 -69.75611111:1 30"
         RA, DEC, radius = parse_position_string(pstring)
-        self.assertEqual([RA, DEC, radius], [80.89416667,-69.75611111, 3.0])
+        self.assertEqual([RA, DEC, radius], [u'80.8942', u'-69.7561', 1.5])
         # No radius in input string results in default radius
         pstring = "80.89416667 -69.75611111"
         RA, DEC, radius = parse_position_string(pstring)
-        self.assertEqual([RA, DEC, radius], [80.89416667,-69.75611111, default_radius])
+        self.assertEqual([RA, DEC, radius], [u'80.8942', u'-69.7561', default_radius])
         # Invalid hms string results in default radius
         pstring = "80.89416667 -69.75611111:a b"
         RA, DEC, radius = parse_position_string(pstring)
-        self.assertEqual([RA, DEC, radius], [80.89416667,-69.75611111, default_radius])
+        self.assertEqual([RA, DEC, radius], [u'80.8942', u'-69.7561', default_radius])
+        #
+        pstring = "80.89416667 -69.75611111:a"
+        RA, DEC, radius = parse_position_string(pstring)
+        self.assertEqual([RA, DEC, radius], [u'80.8942', u'-69.7561', default_radius])
         # There has to be RA and DEC
         pstring = "80.89416667"
-        error = ''
-        try:
-            result = parse_position_string(pstring)
-        except IncorrectPositionFormatError:
-            error = 'Incorrect Position Format'
-        self.assertEqual(error, 'Incorrect Position Format')
-        # There has to be a '+' or '-' in the string (declination)
-        pstring = "80.89416667 69.75611111"
         error = ''
         try:
             result = parse_position_string(pstring)
@@ -479,23 +532,9 @@ class TestDataRetrieval(TestCase):
         # Check position strings of the format "hh mm ss [+-]dd mm ss"
         pstring = "18 04 20.99 -29 31 08.9"
         RA, DEC, radius = parse_position_string(pstring)
-        self.assertEqual([RA, DEC, radius], ['271.087', '-29.5191', default_radius])
-        # Catch improperly formatted string
-        pstring = "18 04 20.99 29 31 08.9"
-        error = ''
-        try:
-            result = parse_position_string(pstring)
-        except IncorrectPositionFormatError:
-            error = 'Incorrect Position Format'
+        self.assertEqual([RA, DEC, radius], [u'18.0725', u'-29.5191', default_radius])
 
-        pstring = "11238 04 20.99 -999 31 08.9"
-        error = ''
-        try:
-            result = parse_position_string(pstring)
-        except IncorrectPositionFormatError:
-            error = 'Incorrect Position Format'
-
-    def test_parse_position_string_default_radius(self):
+    def test_cleanup_obhect_names_simbad(self):
         '''Test to see if SIMBAD cleans up object string correctly'''
         from object_service.SIMBAD import cleanup_object_name
         # The function should remove catalogue prefixes

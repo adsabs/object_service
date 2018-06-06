@@ -10,6 +10,7 @@ from object_service import app
 import json
 import httpretty
 import mock
+from requests.exceptions import ConnectTimeout, ReadTimeout
 
 class TestExpectedResults(TestCase):
 
@@ -119,56 +120,73 @@ class TestExpectedResults(TestCase):
     def test_position_search_200(self):
         '''Test to see if calling the position search endpoint
            works for valid data'''
-        QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
-        mockdata =  {"data":[["2003A&A...405..111G"],["2011AcA....61..103G"]]}
-        # Mock the reponse
+        # Define mock data to be returned to mock external SIMBAD query
+        SIMBAD_QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
+        simbad_mockdata =  {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"],[3253618, "NAME SMC", "NAME SMC"]]}
+        # Define mock data to be returned to mock external NED query
+        NED_QUERY_URL = self.app.config.get('OBJECTS_NED_OBJSEARCH')
+        ned_mockdata = "\n".join(['bibcode1|Andromeda|foo|bar'])
+        # The test query we will provide
+        query = 'bibstem:A&A object:"80.89416667 -69.75611111:0.166666" year:2015'
+        # Mock the SIMBAD reponse
         httpretty.register_uri(
-            httpretty.POST, QUERY_URL,
+            httpretty.POST, SIMBAD_QUERY_URL,
             content_type='application/json',
             status=200,
-            body='%s'%json.dumps(mockdata))
-        # Do the GET request
-        url = url_for('positionsearch', pstring="80.89416667 -69.75611111:0.166666")
-        r = self.client.get(url)
+            body='%s'%json.dumps(simbad_mockdata))
+        # Mock the NED response
+        httpretty.register_uri(
+            httpretty.GET, NED_QUERY_URL,
+            content_type='text/plain',
+            status=200,
+            body='%s'%json.dumps(ned_mockdata))
+        # Do the POST request
+        r = self.client.post(
+            url_for('querysearch'),
+            content_type='application/json',
+            data=json.dumps({'query': query}))
         # The response should have a status code 200
-        self.assertTrue(r.status_code == 200)
         # See if we received the expected results
-        expected = {u'data': [u'2011AcA....61..103G', u'2003A&A...405..111G']}
+        expected = {u'query': u'bibstem:A&A (simbid:(3253618 OR 1575544 OR 3133169) OR nedid:(Andromeda)) year:2015'}
         self.assertEqual(r.json, expected)
 
     @httpretty.activate
-    def test_position_search_poserror(self):
-        '''Test position query with invalid position string'''
-        QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
-        mockdata =  {"data":[["2003A&A...405..111G"],["2011AcA....61..103G"]]}
-        # Mock the reponse
+    def test_position_search_NED_SIMBAD_error(self):
+        '''Test to see if calling the position search endpoint
+           works for valid data'''
+        def exceptionCallback(request, uri, headers):
+            service = 'SIMBAD'
+            if 'caltech' in uri:
+                service = 'NED'
+            raise Exception('Query to {0} blew up!'.format(service))
+        # Define mock data to be returned to mock external SIMBAD query
+        SIMBAD_QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
+        simbad_mockdata =  {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"],[3253618, "NAME SMC", "NAME SMC"]]}
+        # Define mock data to be returned to mock external NED query
+        NED_QUERY_URL = self.app.config.get('OBJECTS_NED_OBJSEARCH')
+        ned_mockdata = "\n".join(['bibcode1|Andromeda|foo|bar'])
+        # The test query we will provide
+        query = 'bibstem:A&A object:"80.89416667 -69.75611111:0.166666" year:2015'
+        # Mock the SIMBAD reponse
         httpretty.register_uri(
-            httpretty.POST, QUERY_URL,
+            httpretty.POST, SIMBAD_QUERY_URL,
             content_type='application/json',
-            status=200,
-            body='%s'%json.dumps(mockdata))
-        # First an incorrectly formatted search radius: 
-        # this should result in using the default radius and return a valid result
-        pstring = "80.89416667 -69.75611111:1 2 3 4"
-        url = url_for('positionsearch', pstring=pstring)
-        r = self.client.get(url)
+            body=exceptionCallback)
+        # Mock the NED response
+        httpretty.register_uri(
+            httpretty.GET, NED_QUERY_URL,
+            content_type='text/plain',
+            body=exceptionCallback)
+        # Do the POST request
+        r = self.client.post(
+            url_for('querysearch'),
+            content_type='application/json',
+            data=json.dumps({'query': query}))
+        # The response should have a status code 200
         # See if we received the expected results
-        expected = {u'data': [u'2011AcA....61..103G', u'2003A&A...405..111G']}
+        expected = {'Error':'Unable to get results!',
+                    'Error Info':'SIMBAD position query blew up (Query to SIMBAD blew up!), NED cone search failed (Query to NED blew up!)'}
         self.assertEqual(r.json, expected)
-        # Next an invalid type for RA and DEC
-        pstring = "A B:0.166666"
-        url = url_for('positionsearch', pstring=pstring)
-        r = self.client.get(url)
-        # See if we received the expected results
-        expected = 'Invalid position string: %s'%pstring
-        self.assertEqual(r.json['Error Info'], expected)
-        # Test no sign for DEC
-        pstring = "80.89416667 69.75611111:0.166666"
-        url = url_for('positionsearch', pstring=pstring)
-        r = self.client.get(url)
-        # See if we received the expected results
-        expected = 'Invalid position string: %s'%pstring
-        self.assertEqual(r.json['Error Info'], expected)
 
     @httpretty.activate
     def test_id_search_200(self):
