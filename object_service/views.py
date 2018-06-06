@@ -3,15 +3,17 @@ from flask_restful import Resource
 from flask_discoverer import advertise
 from flask import Response
 from SIMBAD import get_simbad_data
-from SIMBAD import do_position_query
-from SIMBAD import parse_position_string
+from SIMBAD import simbad_position_query
+#from SIMBAD import parse_position_string
 from NED import get_ned_data
 from NED import get_NED_refcodes
+from NED import ned_position_query
 
 from utils import parse_query_string
 from utils import get_object_translations
 from utils import translate_query
 from utils import isBalanced
+from utils import parse_position_string
 
 import time
 import timeout_decorator
@@ -81,34 +83,6 @@ class ObjectSearch(Resource):
             # Send back the results
             return result.get('data',{})
 
-class PositionSearch(Resource):
-
-    """Return publication information for a cone search"""
-    scopes = []
-    rate_limit = [1000, 60 * 60 * 24]
-    decorators = [advertise('scopes', 'rate_limit')]
-    def get(self, pstring):
-        # The following position strings are supported
-        # 1. 05 23 34.6 -69 45 22:0 6 (or 05h23m34.6s -69d45m22s:0m6s)
-        # 2. 05 23 34.6 -69 45 22:0.166666 (or 05h23m34.6s -69d45m22s:0.166666)
-        # 3. 80.89416667 -69.75611111:0.166666
-        stime = time.time()
-        # If we're given a string with qualifiers ('h', etc), convert to one without
-        current_app.logger.info('Attempting SIMBAD position search: %s'%pstring)
-        try:
-            RA, DEC, radius = parse_position_string(pstring)
-        except Exception, err:
-            current_app.logger.error('Position string could not be parsed: %s' % pstring)
-            return {'Error': 'Unable to get results!',
-                    'Error Info': 'Invalid position string: %s'%pstring}, 200
-        try:
-            result = do_position_query(RA, DEC, radius)
-        except timeout_decorator.timeout_decorator.TimeoutError:
-            current_app.logger.error('Position query %s timed out' % pstring)
-            return {'Error': 'Unable to get results!',
-                    'Error Info': 'Position query timed out'}, 200
-        return result
-
 class QuerySearch(Resource):
 
     """Given a Solr query with object names, return a Solr query with SIMBAD identifiers"""
@@ -152,6 +126,43 @@ class QuerySearch(Resource):
         if len(object_names) == 0:
             return {"Error": "Unable to get results!",
                     "Error Info": "No identifiers/objects found in Solr object query"}, 200
+        # First we check if the object query was in fact a cone search. This would have been a queery of the form
+        #  object:"80.89416667 -69.75611111:0.166666"
+        # resulting in 1 entry in the variable object_queries (namely: ['object:"80.89416667 -69.75611111:0.166666"'])
+        # and with 1 entry in object_names (namely: [u'80.89416667 -69.75611111:0.166666']).
+        is_cone_search = False
+        if len(object_queries) == 1:
+            # We received a cone search, which needs to be translated into a query in terms of 'simbid' and 'nedid'
+            try:
+                RA, DEC, radius = parse_position_string(object_names[0])
+                current_app.logger.info('Starting cone search at RA, DEC, radius: {0}, {1}, {2}'.format(RA, DEC, radius))
+                is_cone_search = True
+            except:
+                pass
+        # If this is a comne search, we go a different path
+        if is_cone_search:
+            result = {'simbad':[], 'ned':[]}
+            simbad_fail = False
+            ned_fail = False
+            result['simbad'] = simbad_position_query(RA, DEC, radius)
+            if 'Error' in result['simbad']:
+                simbad_fail = result['simbad']['Error Info']
+            result['ned'] = ned_position_query(RA, DEC, radius)
+            if 'Error' in result['ned']:
+                ned_fail = result['ned']['Error Info']
+            # If both SIMBAD and NED errored out, return an error
+            if simbad_fail and ned_fail:
+                return {"Error": "Unable to get results!", 
+                        "Error Info": "{0}, {1}".format(simbad_fail, ned_fail)}, 200
+            # Form the query in terms on simbid and nedid:
+            cone_components = []
+            if len(result['simbad']) > 0:
+                cone_components.append('simbid:({0})'.format(" OR ".join(result['simbad'])))
+            if len(result['ned']) > 0:
+                cone_components.append('nedid:({0})'.format(" OR ".join(result['ned'])))
+            oquery = "({0})".format(" OR ".join(cone_components))
+            translated_query = solr_query.replace(object_queries[0], oquery)
+            return {'query': translated_query}
         # Create the translation map from the object names provided to identifiers indexed in Solr (simbid and nedid)
         name2id = get_object_translations(object_names, targets)
         # Now we have all necessary information to created the translated query

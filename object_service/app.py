@@ -1,6 +1,5 @@
 from werkzeug.serving import run_simple
 from views import ObjectSearch
-from views import PositionSearch
 from views import QuerySearch
 from views import ClassicObjectSearch
 from flask_restful import Api
@@ -19,7 +18,6 @@ def create_app():
 
     api = Api(app)
     api.add_resource(ObjectSearch, '/', '/<string:objects>', '/<string:objects>/<string:source>')
-    api.add_resource(PositionSearch, '/pos/<string:pstring>')
     api.add_resource(QuerySearch, '/query')
     api.add_resource(ClassicObjectSearch, '/nedsrv')
 

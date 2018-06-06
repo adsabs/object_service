@@ -79,5 +79,17 @@ class TestDataRetrieval(TestCase):
 
         self.assertEqual(result, expected)
 
+    @httpretty.activate   
+    def test_failed_object_data_retrieval(self):
+        from object_service.utils import get_object_translations
+        def exceptionCallback(request, uri, headers):
+            raise ReadTimeout('Connection timed out.')
+        QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
+        httpretty.register_uri(
+            httpretty.POST, QUERY_URL,
+            body=exceptionCallback)
+        result = get_object_translations(['a'],['simbad'])
+        self.assertEqual(result, {'simbad': {'a': '0'}})
+
 if __name__ == '__main__':
     unittest.main()

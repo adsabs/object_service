@@ -3,8 +3,13 @@ from luqum.parser import parser
 from luqum.utils import LuceneTreeTransformer
 from NED import get_ned_data
 from SIMBAD import get_simbad_data
+from astropy import units as u
+from astropy.coordinates import SkyCoord
+from astropy.coordinates import Angle
 from flask import current_app, request
 
+class IncorrectPositionFormatError(Exception):
+    pass
 
 class ObjectQueryExtractor(LuceneTreeTransformer):
     def visit_search_field(self, node, parents):
@@ -85,14 +90,12 @@ def parse_query_string(query_string):
     # and extract the nodes associated with object: query modifiers
     extractor = ObjectQueryExtractor()
     # Running the extractor will populate two lists
-    # 
+    # initialize the extractor
     extractor.object_nodes = []
     extractor.object_names = []
-    try:
-        extractions = extractor.visit(query_tree)
-    except Exception, err:
-        current_app.logger.error('Extracting object names blew up: %s'%str(err))
-        return [], []
+    # run the extractor
+    extractions = extractor.visit(query_tree)
+
     return [on for on in extractor.object_names if on.strip()], extractor.object_nodes
 
 def get_object_data(identifiers, service):
@@ -120,10 +123,9 @@ def get_object_translations(onames, trgts):
                 # An error was returned!
                 current_app.logger.error('Failed to find data for {0} object {1}!: {2}'.format(trgt.upper(), oname, result.get('Error Info','NA')))
                 continue
-            try:
-                idmap[trgt][oname] =[e.get('id',0) for e in result['data'].values()][0]
-            except:
-                continue
+
+            idmap[trgt][oname] =[e.get('id',0) for e in result['data'].values()][0]
+
             
     return idmap
 
@@ -158,3 +160,22 @@ def translate_query(solr_query, oqueries, trgts, onames, translations):
         translated_query = "(({0}) database:astronomy)".format(" OR ".join(query_components))
         solr_query = solr_query.replace(oquery, "(({0}) database:astronomy)".format(" OR ".join(query_components)))
     return solr_query
+
+def parse_position_string(pstring):
+    # In the case of a cone search, we will have received a query of the form
+    #   object:"<position>(:<radius>)"
+    # (where the search radius is optional)
+    if pstring.find(':') > -1:
+        position, radius = pstring.split(':')
+        try:
+            search_radius = Angle('{0} degrees'.format(radius.strip())).degree
+        except:
+            search_radius = current_app.config.get('OBJECTS_DEFAULT_RADIUS')
+    else:
+        position = pstring.strip()
+        search_radius = current_app.config.get('OBJECTS_DEFAULT_RADIUS')
+    try:
+        RA, DEC = SkyCoord(position, unit=(u.deg, u.deg)).to_string('decimal').split()
+    except:
+        raise IncorrectPositionFormatError
+    return RA, DEC, search_radius

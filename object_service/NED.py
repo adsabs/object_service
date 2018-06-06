@@ -91,6 +91,63 @@ def get_ned_data(id_list, input_type):
 
     return results
 
+def ned_position_query(RA, DEC, RADIUS):
+    nedids = []
+    QUERY_URL = current_app.config.get('OBJECTS_NED_OBJSEARCH')
+    TIMEOUT = current_app.config.get('OBJECTS_NED_TIMEOUT',1)
+    MAX_RADIUS = float(current_app.config.get('OBJECTS_NED_MAX_RADIUS'))
+    # set headers for query
+    headers = {
+        'User-Agent': 'ADS Object Service (Cone Search)',
+        'Content-type': 'application/json',
+        'Accept': 'text/plain'
+    }
+    # First set the default query parameters
+    query_params = {
+        'of':'ascii_bar',
+        'search_type':'Near Position Search',
+        'img_stamp':'NO',
+        'list_limit':'5',
+        'zv_breaker':'30000.0',
+        'obj_sort':'Distance to search center',
+        'out_equinox':'J2000.0',
+        'out_csys':'Equatorial',
+        'nmp_op':'ANY',
+        'ot_include':'ANY',
+        'z_unit':'z',
+        'z_value1':'',
+        'z_value2':'',
+        'z_constraint':'Unconstrained',
+        'corr_z':'1',
+        'omegav':'0.73',
+        'omegam':'0.27',
+        'hconst':'73',
+        'radius':'2',
+        'in_equinox':'J2000.0',
+        'in_csys':'Equatorial',
+        }
+    # Now add the position information
+    query_params['lon'] = "{0}d".format(RA)
+    query_params['lat'] = "{0}d".format(DEC)
+    # NED wants radius in arcminutes
+    query_params['radius'] = min(float(RADIUS)*60.0, MAX_RADIUS)
+    # Do the query
+    try:
+        response = requests.get(QUERY_URL, headers=headers, params=query_params, timeout=TIMEOUT)
+    except (ConnectTimeout, ReadTimeout) as err:
+        current_app.logger.info('NED cone search to %s timed out! Request took longer than %s second(s)'%(QUERY_URL, TIMEOUT))
+        return {"Error": "Unable to get results!", "Error Info": "NED cone search timed out: {0}".format(str(err))}
+    except Exception, err:
+        current_app.logger.error("NED cone search to %s failed (%s)"%(QUERY_URL, err))
+        return {"Error": "Unable to get results!", "Error Info": "NED cone search failed ({0})".format(err)}
+    data = response.text.split('\n')
+    nedids = [e.split('|')[1].replace(' ','_') for e in data if e.find('|') > -1]
+    try:
+        nedids.remove('Object_Name')
+    except:
+        pass
+    return nedids
+    
 def get_NED_refcodes(obj_data):
     # NED endpoint to get data
     ned_url = current_app.config.get('OBJECTS_NED_URL')
@@ -145,18 +202,11 @@ def get_NED_refcodes(obj_data):
         # This is still a useless case, but we want to send some data back for potential use. These are
         # "ambiguous" cases, where there are a number of potential candidates. This info is sent back.
         elif ned_data['ResultCode'] == 1:
-            try:
-                result['ambiguous'].append({object_name:ned_data['Interpreted']['Aliases']})
-            except:
-                continue
+            result['ambiguous'].append({object_name:ned_data['Interpreted']['Aliases']})
         else:
         # We have a canonical name. Store it in the appropriate list, so that we can query Solr with
         # it and retrieve bibcodes
-            try:
-                canonicals.append(ned_data['Preferred']['Name'])
-            except:
-                # This should not happen, because result codes 3 are supposed to have the canonical name
-                continue
+            canonicals.append(ned_data['Preferred']['Name'])
     # We retrieve bibcodes with one Solr query, using "nedid:" (we use canonical object names as identifiers,
     # with spaces replaced by underscores)
     obj_list = " OR ".join(map(lambda a: "nedid:%s" % a.replace(' ','_'), canonicals))

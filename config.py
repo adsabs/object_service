@@ -2,10 +2,17 @@
 import os
 # Configs specific to this ervice
 OBJECTS_API_TOKEN = 'this should be changed'
-# URL to access the SIMBAB TAP interface
+# URL to access the SIMBAB TAP interface 
 OBJECTS_SIMBAD_TAP_URL = 'http://simbad.u-strasbg.fr/simbad/sim-tap/sync'
+#OBJECTS_SIMBAD_TAP_URL = 'http://simbad.harvard.edu/simbad/sim-tap'
+# Maximum search radius for SIMBAD (degrees)
+OBJECTS_SIMBAD_MAX_RADIUS = 20
 # URL to access the NED interface
 OBJECTS_NED_URL = 'http://ned.ipac.caltech.edu/srs/ObjectLookup'
+# URL to access NED objsearch
+OBJECTS_NED_OBJSEARCH = 'https://ned.ipac.caltech.edu/cgi-bin/objsearch'
+# Maximum search radius for NED (arcmin)
+OBJECTS_NED_MAX_RADIUS = 300
 # Time-out in seconds for SIMBAD TAP service requests
 OBJECTS_SIMBAD_TIMEOUT = 4
 # Time-out in seconds for NED service requests
