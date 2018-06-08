@@ -31,7 +31,6 @@ python-dateutil==2.6.0
 pytz==2016.10
 requests==2.13.0
 simplejson==3.10.0
-six==1.5.2
 supervisor==3.3.0
 timeout-decorator==0.3.2
 urllib3==1.7.1

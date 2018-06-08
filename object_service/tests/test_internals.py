@@ -26,7 +26,7 @@ class TestConfig(TestCase):
         required = ["OBJECTS_SIMBAD_TAP_URL",
                     "OBJECTS_CACHE_TIMEOUT",
                     "OBJECTS_DEFAULT_RADIUS",
-                    "OBJECTS_SIMBAD_MAX_REC",
+                    "OBJECTS_SIMBAD_MAX_NUMBER",
                     "OBJECTS_NED_URL",
                     ]
         missing = [x for x in required if x not in self.app.config.keys()]
