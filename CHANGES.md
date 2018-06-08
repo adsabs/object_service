@@ -1,3 +1,7 @@
+### 1.0.44
+
+* For cone search, limit the potential number of objects returned
+
 ### 1.0.43
 
 * Unittest coverage improvement

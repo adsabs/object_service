@@ -96,6 +96,7 @@ def ned_position_query(RA, DEC, RADIUS):
     QUERY_URL = current_app.config.get('OBJECTS_NED_OBJSEARCH')
     TIMEOUT = current_app.config.get('OBJECTS_NED_TIMEOUT',1)
     MAX_RADIUS = float(current_app.config.get('OBJECTS_NED_MAX_RADIUS'))
+    MAX_OBJECTS = int(current_app.config.get('OBJECTS_NED_MAX_NUMBER'))
     # set headers for query
     headers = {
         'User-Agent': 'ADS Object Service (Cone Search)',
@@ -146,7 +147,7 @@ def ned_position_query(RA, DEC, RADIUS):
         nedids.remove('Object_Name')
     except:
         pass
-    return nedids
+    return nedids[:MAX_OBJECTS]
     
 def get_NED_refcodes(obj_data):
     # NED endpoint to get data

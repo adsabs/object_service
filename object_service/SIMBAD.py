@@ -70,19 +70,30 @@ def simbad_position_query(RA, DEC, RADIUS):
     QUERY_URL = current_app.config.get('OBJECTS_SIMBAD_TAP_URL')
     current_app.logger.info('TAP service used for position query: %s'%QUERY_URL)
     MAX_RADIUS = float(current_app.config.get('OBJECTS_SIMBAD_MAX_RADIUS'))
+    MAX_NUMBER = current_app.config.get('OBJECTS_SIMBAD_MAX_NUMBER')
     RADIUS = min(float(RADIUS), MAX_RADIUS)
     params = {
         'request' : 'doQuery',
         'lang' : 'adql',
         'format' : 'json',
-        'maxrec' : current_app.config.get('OBJECTS_SIMBAD_MAX_REC')
+        'maxrec' : MAX_NUMBER
     }
-    params['query'] = "SELECT DISTINCT oid \
+#    params['query'] = "SELECT DISTINCT oid \
+#                       FROM basic \
+#                       WHERE CONTAINS(POINT('ICRS', ra, dec), CIRCLE('ICRS', %s, %s, %s)) = 1 \
+#                       AND coo_bibcode IS NOT NULL \
+#                       AND ra IS NOT NULL \
+#                       AND dec IS NOT NULL;" % (RA, DEC, RADIUS)
+    params['query'] = "SELECT TOP %s oid, \
+                       DISTANCE( \
+                       POINT('ICRS', ra, dec), \
+                       POINT('ICRS', %s, %s)) AS dist \
                        FROM basic \
                        WHERE CONTAINS(POINT('ICRS', ra, dec), CIRCLE('ICRS', %s, %s, %s)) = 1 \
                        AND coo_bibcode IS NOT NULL \
                        AND ra IS NOT NULL \
-                       AND dec IS NOT NULL;" % (RA, DEC, RADIUS)
+                       AND dec IS NOT NULL \
+                       ORDER BY dist ASC;" % (MAX_NUMBER, RA, DEC, RA, DEC, RADIUS)
     headers = {
         'User-Agent': 'ADS Object Service (Cone Search)'
     }
