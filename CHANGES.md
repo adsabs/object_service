@@ -1,3 +1,7 @@
+### 1.0.45
+
+* Update of HTTP status codes for nedsrv errors
+
 ### 1.0.44
 
 * For cone search, limit the potential number of objects returned

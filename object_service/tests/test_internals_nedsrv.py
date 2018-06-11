@@ -329,7 +329,7 @@ class TestDataRetrieval(TestCase):
         # Now run the query
         result = get_NED_refcodes(obj_data)
         expected = {"Error": "Unable to get results!", 
-                    "Error Info": "No bibcodes returned for query: nedid:FOO_BAR pubdate:[1800-00 TO 2018-00] bibstem:(ApJ OR A&A) property:refereed"}
+                    "Error Info": "No bibcodes returned for query: nedid:FOO_BAR year:1800-2018 bibstem:(ApJ OR A&A) property:refereed"}
         self.assertEqual(result, expected) 
     
     @httpretty.activate
