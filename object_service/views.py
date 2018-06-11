@@ -189,9 +189,12 @@ class ClassicObjectSearch(Resource):
         results = get_NED_refcodes(request.json)
 
         if "Error" in results:
+            status = 400
             error_info = results.get('Error Info', 'NA')
+            if error_info.find('timed out') > -1:
+                status = 504
             current_app.logger.error('Classic Object Search request request blew up. Error info: %s' % error_info)
-            return results, 500
+            return results, status
         duration = time.time() - stime
         current_app.logger.info('Classic Object Search request successfully completed in %s real seconds'%duration)
         # what output format?

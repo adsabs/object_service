@@ -155,7 +155,7 @@ class TestExpectedResults(TestCase):
             content_type='application/json',
             data=json.dumps({'objects': []}))
         # The response should have a status code 200
-        self.assertTrue(r.status_code == 500)
+        self.assertTrue(r.status_code == 400)
         # See if we received the expected results
         expected = {u'Error Info': u'No object names provided', u'Error': u'Unable to get results!'}
         self.assertEqual(r.json, expected)
