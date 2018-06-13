@@ -1,3 +1,7 @@
+### 1.0.46
+
+* bugfix in returned data processing
+
 ### 1.0.45
 
 * Update of HTTP status codes for nedsrv errors
