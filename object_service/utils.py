@@ -123,10 +123,12 @@ def get_object_translations(onames, trgts):
                 # An error was returned!
                 current_app.logger.error('Failed to find data for {0} object {1}!: {2}'.format(trgt.upper(), oname, result.get('Error Info','NA')))
                 continue
+            try:
+                # We need to have a 'try' here in case a service returns an empty 'data' attribute
+                idmap[trgt][oname] =[e.get('id',0) for e in result['data'].values()][0]
+            except:
+                continue
 
-            idmap[trgt][oname] =[e.get('id',0) for e in result['data'].values()][0]
-
-            
     return idmap
 
 def translate_query(solr_query, oqueries, trgts, onames, translations):
