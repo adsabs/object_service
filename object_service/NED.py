@@ -48,7 +48,7 @@ def get_ned_data(id_list, input_type):
     if input_type in ['identifiers', 'objects']:
         for ident in id_list:
             # Since all spaces in the identifiers where replaced by underscores, we have to undo this
-            odata = do_ned_object_lookup(QUERY_URL, ident.replace('_',' '))
+            odata = do_ned_object_lookup(QUERY_URL, ident.strip().replace('_',' '))
             if "Error" in odata:
                 # NED query failed. This failure either means timeout or service problems
                 # We return nothing for the entire query, with the proper error message
@@ -63,7 +63,7 @@ def get_ned_data(id_list, input_type):
                     if input_type == 'identifiers':
                         results['data'][ident] = {'id': ident, 'canonical': odata['Preferred']['Name']}
                     else:
-                        results['data'][ident] = {'id': odata['Preferred']['Name'].replace(' ','_'), 'canonical': odata['Preferred']['Name']}
+                        results['data'][ident] = {'id': odata['Preferred']['Name'].strip().replace(' ','_'), 'canonical': odata['Preferred']['Name']}
                 elif resultcode in [0,1,2]:
                     # Unable to create usable results
                     results['skipped'].append(ident)
@@ -85,7 +85,7 @@ def get_ned_data(id_list, input_type):
         results['data'] = {}
         results['skipped'] = []
         for ident in id_list:
-            results['data'][ident] = {'id': ident, 'canonical': ident.replace('_',' ')}
+            results['data'][ident] = {'id': ident, 'canonical': ident.strip().replace('_',' ')}
     else:
         return {"Error": "Unable to get results!", "Error Info": "Unknown input type specified!"}
 
@@ -142,7 +142,7 @@ def ned_position_query(RA, DEC, RADIUS):
         current_app.logger.error("NED cone search to %s failed (%s)"%(QUERY_URL, err))
         return {"Error": "Unable to get results!", "Error Info": "NED cone search failed ({0})".format(err)}
     data = response.text.split('\n')
-    nedids = [e.split('|')[1].replace(' ','_') for e in data if e.find('|') > -1]
+    nedids = [e.split('|')[1].strip().replace(' ','_') for e in data if e.find('|') > -1]
     try:
         nedids.remove('Object_Name')
     except:
@@ -207,7 +207,7 @@ def get_NED_refcodes(obj_data):
         else:
         # We have a canonical name. Store it in the appropriate list, so that we can query Solr with
         # it and retrieve bibcodes
-            canonicals.append(ned_data['Preferred']['Name'])
+            canonicals.append(ned_data['Preferred']['Name'].strip())
     # We retrieve bibcodes with one Solr query, using "nedid:" (we use canonical object names as identifiers,
     # with spaces replaced by underscores)
     obj_list = " OR ".join(map(lambda a: "nedid:%s" % a.replace(' ','_'), canonicals))

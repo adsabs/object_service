@@ -1,3 +1,7 @@
+### 1.0.47
+
+* bugfix: Github issue 78 (trailing spaces in object names)
+
 ### 1.0.46
 
 * bugfix in returned data processing
