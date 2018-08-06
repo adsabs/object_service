@@ -1,14 +1,11 @@
-import requests
 from flask import current_app
-
-requests.packages.urllib3.disable_warnings()
 
 client = lambda: Client(current_app.config).session
 
 
 class Client:
     """
-    The Client class is a thin wrapper around requests; Use it as a centralized
+    The Client class is a thin wrapper around adsmutils ADSFlask client; Use it as a centralized
     place to set application specific parameters, such as the oauth2
     authorization header
     """
@@ -18,7 +15,7 @@ class Client:
         :param client_config: configuration dictionary of the client
         """
 
-        self.session = requests.Session()
+        self.session = current_app.client # Use HTTP pool provided by adsmutils ADSFlask
         self.token = config.get('OBJECTS_API_TOKEN')
         if self.token:
             self.session.headers.update(

@@ -4,7 +4,6 @@ import traceback
 from flask import current_app
 from flask import request
 from client import client
-import requests
 import json
 from requests.exceptions import ConnectTimeout, ReadTimeout, ConnectionError
 import timeout_decorator
@@ -17,13 +16,13 @@ def do_ned_object_lookup(url, oname):
     }
     headers = {
         'User-Agent': 'ADS Object Service (Object Search)',
-        'Content-type': 'application/json', 
+        'Content-type': 'application/json',
         'Accept': 'text/plain'
     }
     # Get timeout for request from the config (use 1 second if not found)
     TIMEOUT = current_app.config.get('OBJECTS_NED_TIMEOUT',1)
     try:
-        r = requests.post(url, data=json.dumps(payload), headers=headers, timeout=TIMEOUT)
+        r = current_app.client.post(url, data=json.dumps(payload), headers=headers, timeout=TIMEOUT)
     except (ConnectTimeout, ReadTimeout) as err:
         current_app.logger.info('NED request to %s timed out! Request took longer than %s second(s)'%(url, TIMEOUT))
         return {"Error": "Unable to get results!", "Error Info": "NED request timed out: {0}".format(str(err))}
@@ -134,7 +133,7 @@ def ned_position_query(RA, DEC, RADIUS):
     query_params['radius'] = min(float(RADIUS)*60.0, MAX_RADIUS)
     # Do the query
     try:
-        response = requests.get(QUERY_URL, headers=headers, params=query_params, timeout=TIMEOUT)
+        response = current_app.client.get(QUERY_URL, headers=headers, params=query_params, timeout=TIMEOUT)
     except (ConnectTimeout, ReadTimeout) as err:
         current_app.logger.info('NED cone search to %s timed out! Request took longer than %s second(s)'%(QUERY_URL, TIMEOUT))
         return {"Error": "Unable to get results!", "Error Info": "NED cone search timed out: {0}".format(str(err))}
@@ -148,7 +147,7 @@ def ned_position_query(RA, DEC, RADIUS):
     except:
         pass
     return nedids[:MAX_OBJECTS]
-    
+
 def get_NED_refcodes(obj_data):
     # NED endpoint to get data
     ned_url = current_app.config.get('OBJECTS_NED_URL')
@@ -163,7 +162,7 @@ def get_NED_refcodes(obj_data):
     # Headers for request
     headers = {
         'User-Agent': 'ADS Object Service (Classic Object Search)',
-        'Content-type': 'application/json', 
+        'Content-type': 'application/json',
         'Accept': 'text/plain'
     }
     # We're here, so the data submitted has an 'objects' attribute
@@ -182,7 +181,7 @@ def get_NED_refcodes(obj_data):
         # Query NED API to retrieve the canonical object names for the ones provided
         # (if known to NED)
         try:
-            r = requests.post(ned_url, data=json.dumps(payload), headers=headers, timeout=TIMEOUT)
+            r = current_app.client.post(ned_url, data=json.dumps(payload), headers=headers, timeout=TIMEOUT)
         except (ConnectTimeout, ReadTimeout) as err:
             current_app.logger.info('NED request to %s timed out! Request took longer than %s second(s)'%(ned_url, TIMEOUT))
             return {"Error": "Unable to get results!", "Error Info": "NED request timed out: {0}".format(str(err))}
@@ -195,7 +194,7 @@ def get_NED_refcodes(obj_data):
             return {"Error": "Unable to get results!", "Error Info": "NED returned status %s" % r.status_code}
         # We got a proper response back with data
         ned_data = r.json()
-        # We are not interested in these cases: either not a valid object name, or a known one, but there 
+        # We are not interested in these cases: either not a valid object name, or a known one, but there
         # is no entry in the NED database
         if ned_data['ResultCode'] in [0,2]:
             # No or no unique result
@@ -239,6 +238,6 @@ def get_NED_refcodes(obj_data):
         return result
     except:
         return {"Error": "Unable to get results!", "Error Info": "No bibcodes returned for query: {0}".format(q)}
- 
-        
-   
+
+
+
