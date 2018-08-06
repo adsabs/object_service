@@ -1,3 +1,7 @@
+### 1.0.48
+ 
+* Enabled JSON stdout logging and HTTP connection pool
+
 ### 1.0.47
 
 * bugfix: Github issue 78 (trailing spaces in object names)

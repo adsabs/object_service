@@ -1,8 +1,9 @@
 # necessary import
 import os
+LOG_STDOUT = True
 # Configs specific to this ervice
 OBJECTS_API_TOKEN = 'this should be changed'
-# URL to access the SIMBAB TAP interface 
+# URL to access the SIMBAB TAP interface
 OBJECTS_SIMBAD_TAP_URL = 'http://simbad.u-strasbg.fr/simbad/sim-tap/sync'
 #OBJECTS_SIMBAD_TAP_URL = 'http://simbad.harvard.edu/simbad/sim-tap'
 # Maximum search radius for SIMBAD (degrees)
