@@ -1,3 +1,8 @@
+### 1.0.50
+
+* Improved log messages for exceptions/errors
+* Check SIMBAD identifiers supplied for validity
+
 ### 1.0.49
  
 * Updated adsmutils requirement

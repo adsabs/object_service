@@ -424,7 +424,7 @@ class TestDataRetrieval(TestCase):
             httpretty.POST, QUERY_URL,
             body=exceptionCallback)
         result = get_simbad_data(identifiers, 'identifiers')
-        expected = {'Error': 'Unable to get results!', 'Error Info': 'SIMBAD request failed (not timeout).'}
+        expected = {'Error': 'Unable to get results!', 'Error Info': 'SIMBAD request failed (not timeout): Oops! Something went boink!'}
         self.assertDictEqual(result, expected)
 
     @httpretty.activate
