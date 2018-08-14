@@ -54,6 +54,13 @@ class ObjectSearch(Resource):
             current_app.logger.error('No identifiers and objects were specified for SIMBAD object query')
             return {"Error": "Unable to get results!",
                     "Error Info": "No identifiers/objects found in POST body"}, 200
+        # For a SIMBAD query with type "identifiers", the list should contain only integers
+        if source == 'SIMBAD' and input_type == 'identifiers':
+            wrong_identifiers = [e for e in identifiers if not str(e).isdigit()]
+            if len(wrong_identifiers) > 0:
+                current_app.logger.error('Warning! Found non-integer SIMBAD identifiers: %s'% ",".join(wrong_identifiers))
+            # remove any non-integer identifiers
+            identifiers = [e for e in identifiers if str(e).isdigit()]
         # We should either have a list of identifiers or a list of object names
         if len(identifiers) == 0:
             current_app.logger.error('No identifiers or objects were specified for SIMBAD object query')
@@ -71,6 +78,7 @@ class ObjectSearch(Resource):
             # An error was returned!
             err_msg = result['Error Info']
             current_app.logger.error('Failed to find data for %s %s query (%s)!'%(source.upper(), input_type,err_msg))
+            current_app.logger.error('Original request: %s'%str(request.json))
             return result
         else:
             # We have results!
