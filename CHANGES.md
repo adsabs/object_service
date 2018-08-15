@@ -1,3 +1,7 @@
+### 1.0.51
+
+* Fixed bug in query parameters NED cone search
+
 ### 1.0.50
 
 * Improved log messages for exceptions/errors

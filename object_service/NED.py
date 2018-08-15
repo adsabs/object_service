@@ -127,10 +127,10 @@ def ned_position_query(RA, DEC, RADIUS):
         'in_csys':'Equatorial',
         }
     # Now add the position information
-    query_params['lon'] = "{0}d".format(RA)
+    query_params['lon'] = "{0}h".format(RA)
     query_params['lat'] = "{0}d".format(DEC)
     # NED wants radius in arcminutes
-    query_params['radius'] = min(float(RADIUS)*60.0, MAX_RADIUS)
+    query_params['radius'] = min(float(RADIUS), MAX_RADIUS)
     # Do the query
     try:
         response = current_app.client.get(QUERY_URL, headers=headers, params=query_params, timeout=TIMEOUT)
