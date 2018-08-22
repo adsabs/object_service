@@ -90,8 +90,9 @@ def get_ned_data(id_list, input_type):
 
     return results
 
-def ned_position_query(RA, DEC, RADIUS):
+def ned_position_query(COORD, RADIUS):
     nedids = []
+    RA, DEC = COORD.to_string('hmsdms').split()
     QUERY_URL = current_app.config.get('OBJECTS_NED_OBJSEARCH')
     TIMEOUT = current_app.config.get('OBJECTS_NED_TIMEOUT',1)
     MAX_RADIUS = float(current_app.config.get('OBJECTS_NED_MAX_RADIUS'))
@@ -127,10 +128,10 @@ def ned_position_query(RA, DEC, RADIUS):
         'in_csys':'Equatorial',
         }
     # Now add the position information
-    query_params['lon'] = "{0}h".format(RA)
-    query_params['lat'] = "{0}d".format(DEC)
+    query_params['lon'] = RA
+    query_params['lat'] = DEC
     # NED wants radius in arcminutes
-    query_params['radius'] = min(float(RADIUS), MAX_RADIUS)
+    query_params['radius'] = min(float(RADIUS.degree), MAX_RADIUS)
     # Do the query
     try:
         response = current_app.client.get(QUERY_URL, headers=headers, params=query_params, timeout=TIMEOUT)

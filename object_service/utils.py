@@ -3,6 +3,7 @@ from luqum.parser import parser
 from luqum.utils import LuceneTreeTransformer
 from NED import get_ned_data
 from SIMBAD import get_simbad_data
+from client import client
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.coordinates import Angle
@@ -167,17 +168,52 @@ def parse_position_string(pstring):
     # In the case of a cone search, we will have received a query of the form
     #   object:"<position>(:<radius>)"
     # (where the search radius is optional)
+    search_radius = ''
     if pstring.find(':') > -1:
         position, radius = pstring.split(':')
         try:
-            search_radius = Angle('{0} degrees'.format(radius.strip())).degree
+            search_radius = Angle('{0} degrees'.format(radius.strip()))
         except:
-            search_radius = current_app.config.get('OBJECTS_DEFAULT_RADIUS')
+            pass
     else:
         position = pstring.strip()
-        search_radius = current_app.config.get('OBJECTS_DEFAULT_RADIUS')
+    if not search_radius:
+        search_radius = Angle('{0} degrees'.format(current_app.config.get('OBJECTS_DEFAULT_RADIUS')))
+    # Now try to parse the position string using astropy
+    err = ''
     try:
-        RA, DEC = SkyCoord(position, unit=(u.deg, u.deg)).to_string('decimal').split()
+        coords = SkyCoord(position, frame='icrs')
+    except Exception, err:
+        # Maybe we got an unformatted position string, so don't just quit yet
+        pass
+    if err:
+        try:
+            # Try parsing as an unformatted position string (assuming decimal coordinate format)
+            coords = SkyCoord(position, unit=(u.deg, u.deg))
+        except:
+            # Now we fail for real!
+            raise IncorrectPositionFormatError
+    return coords, search_radius
+
+def verify_query(identifiers, field):
+    # Safeguard for guarantee that SIMBAD and NED identifiers found are
+    # indeed in Solr index
+    query = '{0}:({1})'.format(field, " OR ".join(identifiers))
+    headers = {'X-Forwarded-Authorization':
+                   request.headers.get('Authorization')}
+    params = {'wt': 'json', 'q': query, 'fl': 'id',
+              'rows': 10}
+    response = client().get(
+        current_app.config.get('OBJECTS_SOLRQUERY_URL'),
+        params=params, headers=headers)
+    if response.status_code != 200:
+        return {"Error": "Unable to get results!",
+                "Error Info": "Solr response: %s" % str(response.text),
+                "Status Code": response.status_code}
+    resp = response.json()
+    try:
+        docs = resp['response']['docs']
     except:
-        raise IncorrectPositionFormatError
-    return RA, DEC, search_radius
+        docs = []
+    # return True (we found docs) or False (no docs found)
+    return len(docs) > 0

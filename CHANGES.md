@@ -1,3 +1,7 @@
+### 1.0.52
+
+* Better coordinate handling and transforming
+
 ### 1.0.51
 
 * Fixed bug in query parameters NED cone search

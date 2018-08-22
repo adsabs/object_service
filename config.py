@@ -7,7 +7,7 @@ OBJECTS_API_TOKEN = 'this should be changed'
 OBJECTS_SIMBAD_TAP_URL = 'http://simbad.u-strasbg.fr/simbad/sim-tap/sync'
 #OBJECTS_SIMBAD_TAP_URL = 'http://simbad.harvard.edu/simbad/sim-tap'
 # Maximum search radius for SIMBAD (degrees)
-OBJECTS_SIMBAD_MAX_RADIUS = 20
+OBJECTS_SIMBAD_MAX_RADIUS = 3
 # Maximum number of objects for SIMBAD
 OBJECTS_SIMBAD_MAX_NUMBER = 10
 # URL to access the NED interface

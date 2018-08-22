@@ -4,7 +4,7 @@ from flask_discoverer import advertise
 from flask import Response
 from SIMBAD import get_simbad_data
 from SIMBAD import simbad_position_query
-#from SIMBAD import parse_position_string
+
 from NED import get_ned_data
 from NED import get_NED_refcodes
 from NED import ned_position_query
@@ -14,6 +14,7 @@ from utils import get_object_translations
 from utils import translate_query
 from utils import isBalanced
 from utils import parse_position_string
+from utils import verify_query
 
 import time
 import timeout_decorator
@@ -142,8 +143,9 @@ class QuerySearch(Resource):
         if len(object_queries) == 1:
             # We received a cone search, which needs to be translated into a query in terms of 'simbid' and 'nedid'
             try:
-                RA, DEC, radius = parse_position_string(object_names[0])
-                current_app.logger.info('Starting cone search at RA, DEC, radius: {0}, {1}, {2}'.format(RA, DEC, radius))
+                coordinates, radius = parse_position_string(object_names[0])
+                RADEC = coordinates.to_string('hmsdms')
+                current_app.logger.info('Starting cone search at RA, DEC, radius: {0}, {1}'.format(RADEC, radius))
                 is_cone_search = True
             except:
                 pass
@@ -152,10 +154,24 @@ class QuerySearch(Resource):
             result = {'simbad':[], 'ned':[]}
             simbad_fail = False
             ned_fail = False
-            result['simbad'] = simbad_position_query(RA, DEC, radius)
+            sids = simbad_position_query(coordinates, radius)
+            if len(sids) > 0:
+                vq = verify_query(sids, 'simbid')
+                if not vq:
+                    current_app.logger.info('SIMBAD identifiers not in Solr index: {0}'.format(",".join(sids)))
+                    simbad_fail = 'SIMBAD identifiers not found in Solr index'
+                    sids = []
+            result['simbad'] = sids
             if 'Error' in result['simbad']:
                 simbad_fail = result['simbad']['Error Info']
-            result['ned'] = ned_position_query(RA, DEC, radius)
+            nids = ned_position_query(coordinates, radius)
+            if len(nids) > 0:
+                vq = verify_query(nids, 'nedid')
+                if not vq:
+                    current_app.logger.info('NED identifiers not in Solr index: {0}'.format(",".join(nids)))
+                    ned_fail = 'NED identifiers not found in Solr index'
+                    nids = []
+            result['ned'] = nids
             if 'Error' in result['ned']:
                 ned_fail = result['ned']['Error Info']
             # If both SIMBAD and NED errored out, return an error
