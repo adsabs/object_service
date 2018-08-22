@@ -65,12 +65,13 @@ def get_simbad_data(id_list, input_type):
         results = {"Error": "Unable to get results!", "Error Info": "Bad data returned by SIMBAD"}
     return results
 
-def simbad_position_query(RA, DEC, RADIUS):
+def simbad_position_query(COORD, RADIUS):
+    RA, DEC = COORD.to_string('decimal').split()
     QUERY_URL = current_app.config.get('OBJECTS_SIMBAD_TAP_URL')
     current_app.logger.info('TAP service used for position query: %s'%QUERY_URL)
     MAX_RADIUS = float(current_app.config.get('OBJECTS_SIMBAD_MAX_RADIUS'))
     MAX_NUMBER = current_app.config.get('OBJECTS_SIMBAD_MAX_NUMBER')
-    RADIUS = min(float(RADIUS), MAX_RADIUS)
+    RADIUS = min(float(RADIUS.degree), MAX_RADIUS)
     params = {
         'request' : 'doQuery',
         'lang' : 'adql',

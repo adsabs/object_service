@@ -356,6 +356,9 @@ class TestDataRetrieval(TestCase):
     def test_get_simbad_position_query_timeout(self):
         '''Test to see if SIMBAD position query method behaves as expected'''
         from object_service.SIMBAD import simbad_position_query
+        from astropy.coordinates import SkyCoord
+        from astropy.coordinates import Angle
+        from astropy import units as u
 
         def exceptionCallback(request, uri, headers):
             raise ReadTimeout('Connection timed out.')
@@ -366,7 +369,9 @@ class TestDataRetrieval(TestCase):
         httpretty.register_uri(
             httpretty.POST, QUERY_URL,
             body=exceptionCallback)
-        result = simbad_position_query(11.1, 11.1, 0.1)
+        c = SkyCoord("0.1 0.1", unit=(u.deg, u.deg))
+        r = Angle('0.1 degrees')
+        result = simbad_position_query(c, r)
         expected = {'Error Info': 'SIMBAD position query timed out: Connection timed out.', 'Error': 'Unable to get results!'}
 
         self.assertDictEqual(result, expected)
@@ -375,6 +380,9 @@ class TestDataRetrieval(TestCase):
     def test_get_ned_position_query_timeout(self):
         '''Test to see if NED position query method behaves as expected'''
         from object_service.NED import ned_position_query
+        from astropy.coordinates import SkyCoord
+        from astropy.coordinates import Angle
+        from astropy import units as u
 
         def exceptionCallback(request, uri, headers):
             raise ReadTimeout('Connection timed out.')
@@ -385,7 +393,10 @@ class TestDataRetrieval(TestCase):
         httpretty.register_uri(
             httpretty.GET, QUERY_URL,
             body=exceptionCallback)
-        result = ned_position_query(11.1, 11.1, 0.1)
+        
+        c = SkyCoord("11.1 11.1", unit=(u.deg, u.deg))
+        r = Angle('0.1 degrees')
+        result = ned_position_query(c, r)
         expected = {'Error Info': 'NED cone search timed out: Connection timed out.', 'Error': 'Unable to get results!'}
 
         self.assertDictEqual(result, expected)
@@ -394,6 +405,9 @@ class TestDataRetrieval(TestCase):
     def test_get_ned_position_query_exception(self):
         '''Test to see if NED position query method behaves as expected'''
         from object_service.NED import ned_position_query
+        from astropy.coordinates import SkyCoord
+        from astropy.coordinates import Angle
+        from astropy import units as u
 
         def exceptionCallback(request, uri, headers):
             raise Exception('Houston, we have a problem!')
@@ -404,7 +418,9 @@ class TestDataRetrieval(TestCase):
         httpretty.register_uri(
             httpretty.GET, QUERY_URL,
             body=exceptionCallback)
-        result = ned_position_query(11.1, 11.1, 0.1)
+        c = SkyCoord("11.1 11.1", unit=(u.deg, u.deg))
+        r = Angle('0.1 degrees')
+        result = ned_position_query(c, r)
         expected = {'Error Info': 'NED cone search failed (Houston, we have a problem!)', 'Error': 'Unable to get results!'}
 
         self.assertDictEqual(result, expected)
@@ -441,10 +457,11 @@ class TestDataRetrieval(TestCase):
             status=200,
             body='%s'%json.dumps(mockdata))
         # First parse the position string and see we if get the expected results back
-        RA, DEC, radius = parse_position_string(pstring)
-        self.assertEqual([RA, DEC, radius], ['80.8942','-69.7561',0.166666])
+        coords, radius = parse_position_string(pstring)
+        RA, DEC = coords.to_string('decimal').split()
+        self.assertEqual([RA, DEC, radius.degree], ['80.8942','-69.7561',0.166666])
         # Next query with this positional information
-        result = simbad_position_query(RA, DEC, radius)
+        result = simbad_position_query(coords, radius)
         expected = [u'2011AcA....61..103G', u'2003A&A...405..111G']
         self.assertEqual(result, expected)
 
@@ -452,7 +469,10 @@ class TestDataRetrieval(TestCase):
     def test_do_cone_search_exception(self):
         '''Test to see if SIMBAD cone search method behaves as expected'''
         from object_service.SIMBAD import simbad_position_query
-        
+        from astropy.coordinates import SkyCoord
+        from astropy.coordinates import Angle
+        from astropy import units as u
+
         def exceptionCallback(request, uri, headers):
             raise Exception('Oops! Something went boink!')
 
@@ -465,7 +485,9 @@ class TestDataRetrieval(TestCase):
             status=200,
             body=exceptionCallback)
         # First parse the position string and see we if get the expected results back
-        result = simbad_position_query(80.89416667, -69.7561111, 0.2)
+        c = SkyCoord("80.89416667 -69.7561111", unit=(u.deg, u.deg))
+        r = Angle('0.2 degrees')
+        result = simbad_position_query(c, r)
         expected = {'Error Info': 'SIMBAD position query blew up (Oops! Something went boink!)', 'Error': u'Unable to get results from http://simbad.u-strasbg.fr/simbad/sim-tap/sync!'}
         self.assertDictEqual(result, expected)
 
@@ -473,11 +495,13 @@ class TestDataRetrieval(TestCase):
     def test_do_cone_search_malformed_response(self):
         '''Test to see if SIMBAD cone search method behaves as expected'''
         from object_service.SIMBAD import simbad_position_query
-        
+        from astropy.coordinates import SkyCoord
+        from astropy.coordinates import Angle
+        from astropy import units as u
+
         def exceptionCallback(request, uri, headers):
             raise Exception('Oops! Something went boink!')
 
-        pstring = "80.89416667 -69.75611111:0.166666"
         mockdata = {"foo":"bar"}
         QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
         httpretty.register_uri(
@@ -486,7 +510,9 @@ class TestDataRetrieval(TestCase):
             status=200,
             body='%s'%json.dumps(mockdata))
         # First parse the position string and see we if get the expected results back
-        result = simbad_position_query(80.89416667, -69.7561111, 0.2)
+        c = SkyCoord("80.89416667 -69.7561111", unit=(u.deg, u.deg))
+        r = Angle('0.2 degrees')
+        result = simbad_position_query(c, r)
         expected = {'Error Info': 'Unable to retrieve SIMBAD identifiers from SIMBAD response (no "data" key)!', 'Error': 'Unable to get results!'}
         self.assertDictEqual(result, expected)
 
@@ -499,28 +525,34 @@ class TestDataRetrieval(TestCase):
         # Get the value of the default radius
         default_radius = self.app.config.get('OBJECTS_DEFAULT_RADIUS')
         # First parse the position string and see we if get the expected results back
-        RA, DEC, radius = parse_position_string(pstring)
-        self.assertEqual([RA, DEC, radius], [u'80.8942', u'-69.7561', 0.166666])
+        coords, radius = parse_position_string(pstring)
+        RA, DEC = coords.to_string('decimal').split()
+        self.assertEqual([RA, DEC, radius.degree], [u'80.8942', u'-69.7561', 0.166666])
         # An invalid radius results in the the default radius
         pstring = "80.89416667 -69.75611111:1 2 3 4"
-        RA, DEC, radius = parse_position_string(pstring)
-        self.assertEqual([RA, DEC, radius], [u'80.8942', u'-69.7561', default_radius])
+        coords, radius = parse_position_string(pstring)
+        RA, DEC = coords.to_string('decimal').split()
+        self.assertEqual([RA, DEC, radius.degree], [u'80.8942', u'-69.7561', default_radius])
         # Check if the hms to decimal conversion works as expected
         pstring = "80.89416667 -69.75611111:1 30"
-        RA, DEC, radius = parse_position_string(pstring)
-        self.assertEqual([RA, DEC, radius], [u'80.8942', u'-69.7561', 1.5])
+        coords, radius = parse_position_string(pstring)
+        RA, DEC = coords.to_string('decimal').split()
+        self.assertEqual([RA, DEC, radius.degree], [u'80.8942', u'-69.7561', 1.5])
         # No radius in input string results in default radius
         pstring = "80.89416667 -69.75611111"
-        RA, DEC, radius = parse_position_string(pstring)
-        self.assertEqual([RA, DEC, radius], [u'80.8942', u'-69.7561', default_radius])
+        coords, radius = parse_position_string(pstring)
+        RA, DEC = coords.to_string('decimal').split()
+        self.assertEqual([RA, DEC, radius.degree], [u'80.8942', u'-69.7561', default_radius])
         # Invalid hms string results in default radius
         pstring = "80.89416667 -69.75611111:a b"
-        RA, DEC, radius = parse_position_string(pstring)
-        self.assertEqual([RA, DEC, radius], [u'80.8942', u'-69.7561', default_radius])
+        coords, radius = parse_position_string(pstring)
+        RA, DEC = coords.to_string('decimal').split()
+        self.assertEqual([RA, DEC, radius.degree], [u'80.8942', u'-69.7561', default_radius])
         #
         pstring = "80.89416667 -69.75611111:a"
-        RA, DEC, radius = parse_position_string(pstring)
-        self.assertEqual([RA, DEC, radius], [u'80.8942', u'-69.7561', default_radius])
+        coords, radius = parse_position_string(pstring)
+        RA, DEC = coords.to_string('decimal').split()
+        self.assertEqual([RA, DEC, radius.degree], [u'80.8942', u'-69.7561', default_radius])
         # There has to be RA and DEC
         pstring = "80.89416667"
         error = ''
@@ -531,8 +563,9 @@ class TestDataRetrieval(TestCase):
         self.assertEqual(error, 'Incorrect Position Format')
         # Check position strings of the format "hh mm ss [+-]dd mm ss"
         pstring = "18 04 20.99 -29 31 08.9"
-        RA, DEC, radius = parse_position_string(pstring)
-        self.assertEqual([RA, DEC, radius], [u'18.0725', u'-29.5191', default_radius])
+        coords, radius = parse_position_string(pstring)
+        RA, DEC = coords.to_string('decimal').split()
+        self.assertEqual([RA, DEC, radius.degree], [u'18.0725', u'-29.5191', default_radius])
 
     def test_cleanup_obhect_names_simbad(self):
         '''Test to see if SIMBAD cleans up object string correctly'''
