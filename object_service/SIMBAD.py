@@ -38,7 +38,7 @@ def get_simbad_data(id_list, input_type):
     # Get timeout for request from the config (use 1 second if not found)
     TIMEOUT = current_app.config.get('OBJECTS_SIMBAD_TIMEOUT',1)
     try:
-        r = current_app.client.post(QUERY_URL, data=params, headers=headers, timeout=TIMEOUT)
+        r = current_app.client.post(QUERY_URL, data=params, headers=headers)
     except (ConnectTimeout, ReadTimeout) as err:
         current_app.logger.info('SIMBAD request to %s timed out! Request took longer than %s second(s)'%(QUERY_URL, TIMEOUT))
         return {"Error": "Unable to get results!", "Error Info": "SIMBAD request timed out: {0}".format(err)}
@@ -99,7 +99,7 @@ def simbad_position_query(COORD, RADIUS):
     }
     TIMEOUT = current_app.config.get('OBJECTS_SIMBAD_TIMEOUT',1)
     try:
-        r = current_app.client.post(QUERY_URL, data=params, headers=headers, timeout=TIMEOUT)
+        r = current_app.client.post(QUERY_URL, data=params, headers=headers)
     except (ConnectTimeout, ReadTimeout) as err:
         current_app.logger.info('SIMBAD request to %s timed out! Request took longer than %s second(s)'%(QUERY_URL, TIMEOUT))
         return {"Error": "Unable to get results!", "Error Info": "SIMBAD position query timed out: {0}".format(err)}
