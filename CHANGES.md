@@ -1,3 +1,7 @@
+### 1.0.53
+
+* temporary removal of timeouts in POST requests
+
 ### 1.0.52
 
 * Better coordinate handling and transforming
