@@ -1,3 +1,8 @@
+### 1.0.54
+
+* reinstatement of timeouts
+* use current_app client in utils.py
+
 ### 1.0.53
 
 * temporary removal of timeouts in POST requests

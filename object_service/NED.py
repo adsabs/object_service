@@ -22,7 +22,7 @@ def do_ned_object_lookup(url, oname):
     # Get timeout for request from the config (use 1 second if not found)
     TIMEOUT = current_app.config.get('OBJECTS_NED_TIMEOUT',1)
     try:
-        r = current_app.client.post(url, data=json.dumps(payload), headers=headers)
+        r = current_app.client.post(url, data=json.dumps(payload), headers=headers, timeout=TIMEOUT)
     except (ConnectTimeout, ReadTimeout) as err:
         current_app.logger.info('NED request to %s timed out! Request took longer than %s second(s)'%(url, TIMEOUT))
         return {"Error": "Unable to get results!", "Error Info": "NED request timed out: {0}".format(str(err))}
@@ -134,7 +134,7 @@ def ned_position_query(COORD, RADIUS):
     query_params['radius'] = min(float(RADIUS.degree), MAX_RADIUS)
     # Do the query
     try:
-        response = current_app.client.get(QUERY_URL, headers=headers, params=query_params)
+        response = current_app.client.get(QUERY_URL, headers=headers, params=query_params, timeout=TIMEOUT)
     except (ConnectTimeout, ReadTimeout) as err:
         current_app.logger.info('NED cone search to %s timed out! Request took longer than %s second(s)'%(QUERY_URL, TIMEOUT))
         return {"Error": "Unable to get results!", "Error Info": "NED cone search timed out: {0}".format(str(err))}
@@ -182,7 +182,7 @@ def get_NED_refcodes(obj_data):
         # Query NED API to retrieve the canonical object names for the ones provided
         # (if known to NED)
         try:
-            r = current_app.client.post(ned_url, data=json.dumps(payload), headers=headers)
+            r = current_app.client.post(ned_url, data=json.dumps(payload), headers=headers, timeout=TIMEOUT)
         except (ConnectTimeout, ReadTimeout) as err:
             current_app.logger.info('NED request to %s timed out! Request took longer than %s second(s)'%(ned_url, TIMEOUT))
             return {"Error": "Unable to get results!", "Error Info": "NED request timed out: {0}".format(str(err))}

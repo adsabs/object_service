@@ -199,13 +199,12 @@ def verify_query(identifiers, field):
     # Safeguard for guarantee that SIMBAD and NED identifiers found are
     # indeed in Solr index
     query = '{0}:({1})'.format(field, " OR ".join(identifiers))
-    headers = {'X-Forwarded-Authorization':
-                   request.headers.get('Authorization')}
+    #headers = {'X-Forwarded-Authorization':
+    #               request.headers.get('Authorization')}
     params = {'wt': 'json', 'q': query, 'fl': 'id',
               'rows': 10}
-    response = client().get(
-        current_app.config.get('OBJECTS_SOLRQUERY_URL'),
-        params=params, headers=headers)
+    response = current_app.client.get(
+        current_app.config.get('OBJECTS_SOLRQUERY_URL'), params=params)
     if response.status_code != 200:
         return {"Error": "Unable to get results!",
                 "Error Info": "Solr response: %s" % str(response.text),
