@@ -1,3 +1,8 @@
+### 1.0.55
+
+* consistent use of current_app.client 
+* removed client.py
+
 ### 1.0.54
 
 * reinstatement of timeouts

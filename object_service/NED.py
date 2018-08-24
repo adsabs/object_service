@@ -3,7 +3,6 @@ import sys
 import traceback
 from flask import current_app
 from flask import request
-from client import client
 import json
 from requests.exceptions import ConnectTimeout, ReadTimeout, ConnectionError
 import timeout_decorator
@@ -223,10 +222,10 @@ def get_NED_refcodes(obj_data):
     if obj_data.has_key('refereed_status'):
         q += ' property:{0}'.format(obj_data['refereed_status'])
     # Get the information from Solr
-    headers = {'X-Forwarded-Authorization': request.headers.get('Authorization')}
+#    headers = {'X-Forwarded-Authorization': request.headers.get('Authorization')}
     params = {'wt': 'json', 'q': q, 'fl': 'bibcode',
                       'rows': current_app.config.get('OBJECT_SOLR_MAX_HITS')}
-    response = client().get(current_app.config.get('OBJECTS_SOLRQUERY_URL'), params=params,headers=headers)
+    response = current_app.client.get(current_app.config.get('OBJECTS_SOLRQUERY_URL'), params=params,headers=headers)
     # See if our request was successful
     if response.status_code != 200:
         return {"Error": "Unable to get results!",
