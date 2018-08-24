@@ -3,7 +3,6 @@ from luqum.parser import parser
 from luqum.utils import LuceneTreeTransformer
 from NED import get_ned_data
 from SIMBAD import get_simbad_data
-from client import client
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.coordinates import Angle
@@ -199,12 +198,13 @@ def verify_query(identifiers, field):
     # Safeguard for guarantee that SIMBAD and NED identifiers found are
     # indeed in Solr index
     query = '{0}:({1})'.format(field, " OR ".join(identifiers))
-    #headers = {'X-Forwarded-Authorization':
-    #               request.headers.get('Authorization')}
+    headers = dict(request.headers)
+    token = current_app.config.get('OBJECTS_API_TOKEN')
+    headers.update({'Authorization': 'Bearer %s' % token})
     params = {'wt': 'json', 'q': query, 'fl': 'id',
               'rows': 10}
     response = current_app.client.get(
-        current_app.config.get('OBJECTS_SOLRQUERY_URL'), params=params)
+        current_app.config.get('OBJECTS_SOLRQUERY_URL'), params=params, headers=headers)
     if response.status_code != 200:
         return {"Error": "Unable to get results!",
                 "Error Info": "Solr response: %s" % str(response.text),
