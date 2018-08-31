@@ -1,3 +1,8 @@
+### 1.0.56
+
+* Updated adsmutils requirement
+* Removed some unnecessary requirements
+
 ### 1.0.55
 
 * consistent use of current_app.client 
