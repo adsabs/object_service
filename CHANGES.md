@@ -1,3 +1,7 @@
+### 1.0.58
+
+* Fix for failing results verification in cone search
+
 ### 1.0.57
 
 * Updated adsmutils requirement
