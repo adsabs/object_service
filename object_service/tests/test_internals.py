@@ -24,10 +24,17 @@ class TestConfig(TestCase):
     def test_config_values(self):
         '''Check if all required config variables are there'''
         required = ["OBJECTS_SIMBAD_TAP_URL",
+                    "OBJECTS_SIMBAD_TAP_URL_CDS",
+                    "OBJECTS_NED_URL",
+                    "OBJECTS_NED_OBJSEARCH",
+                    "OBJECTS_SIMBAD_MAX_RADIUS",
+                    "OBJECTS_NED_MAX_RADIUS",
                     "OBJECTS_CACHE_TIMEOUT",
                     "OBJECTS_DEFAULT_RADIUS",
                     "OBJECTS_SIMBAD_MAX_NUMBER",
                     "OBJECTS_NED_URL",
+                    "OBJECTS_SOLRQUERY_URL",
+                    "API_URL"
                     ]
         missing = [x for x in required if x not in self.app.config.keys()]
         self.assertTrue(len(missing) == 0)
@@ -372,7 +379,7 @@ class TestDataRetrieval(TestCase):
         c = SkyCoord("0.1 0.1", unit=(u.deg, u.deg))
         r = Angle('0.1 degrees')
         result = simbad_position_query(c, r)
-        expected = {'Error Info': 'SIMBAD position query timed out: Connection timed out.', 'Error': 'Unable to get results!'}
+        expected = {'Error Info': 'SIMBAD request timed out: Connection timed out.', 'Error': 'Unable to get results!'}
 
         self.assertDictEqual(result, expected)
 
@@ -488,7 +495,9 @@ class TestDataRetrieval(TestCase):
         c = SkyCoord("80.89416667 -69.7561111", unit=(u.deg, u.deg))
         r = Angle('0.2 degrees')
         result = simbad_position_query(c, r)
-        expected = {'Error Info': 'SIMBAD position query blew up (Oops! Something went boink!)', 'Error': u'Unable to get results from http://simbad.u-strasbg.fr/simbad/sim-tap/sync!'}
+        print "XXXX"
+        print result
+        expected = {'Error Info': 'SIMBAD request failed (not timeout): Oops! Something went boink!', 'Error': u'Unable to get results!'}
         self.assertDictEqual(result, expected)
 
     @httpretty.activate

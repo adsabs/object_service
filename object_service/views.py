@@ -4,6 +4,7 @@ from flask_discoverer import advertise
 from flask import Response
 from SIMBAD import get_simbad_data
 from SIMBAD import simbad_position_query
+from SIMBAD import verify_tap_service
 
 from NED import get_ned_data
 from NED import get_NED_refcodes
@@ -31,6 +32,14 @@ class ObjectSearch(Resource):
 
     def post(self):
         stime = time.time()
+        # Verify which TAP service to use
+        try:
+            u = verify_tap_service()
+            current_app.config['OBJECTS_SIMBAD_TAP_URL'] = u
+        except:
+            # This is not supposed to throw an exception, but
+            # if so, we continue with the CDS TAP service
+            current_app.config['OBJECTS_SIMBAD_TAP_URL'] = current_app.config.get('OBJECTS_SIMBAD_TAP_URL_CDS')
         # Get the supplied list of identifiers
         identifiers = []
         input_type = None
@@ -101,6 +110,14 @@ class QuerySearch(Resource):
 
     def post(self):
         stime = time.time()
+        # Verify which TAP service to use
+        try:
+            u = verify_tap_service()
+            current_app.config['OBJECTS_SIMBAD_TAP_URL'] = u
+        except:
+            # This is not supposed to throw an exception, but
+            # if so, we continue with the CDS TAP service
+            current_app.config['OBJECTS_SIMBAD_TAP_URL'] = current_app.config.get('OBJECTS_SIMBAD_TAP_URL_CDS')
         # Get the supplied list of identifiers
         query = None
         itype = None
