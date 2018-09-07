@@ -51,12 +51,19 @@ class TestExpectedResults(TestCase):
         '''Test to see if a 500 from SIMBAD is processed correctly'''
         QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
         identifiers = ["3133169", "1575544"]
+        mockdata =  {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"]]}
+        def request_callback(request, uri, headers):
+            data = request.body
+            status = 200
+            if data.find('TOP') == -1:
+                status = 500
+            return (status, headers, '%s'%json.dumps(mockdata))
         # Mock the reponse
         httpretty.register_uri(
             httpretty.POST, QUERY_URL,
             content_type='application/json',
-            status=500,
-            body='')
+            status=200,
+            body=request_callback)
         # Do the POST request
         r = self.client.post(
             url_for('objectsearch'),
@@ -71,19 +78,26 @@ class TestExpectedResults(TestCase):
         '''Test to see if bad data from SIMBAD is processed correctly'''
         QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
         identifiers = ["3133169", "1575544"]
+        mockdata =  {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"]]}
+        def request_callback(request, uri, headers):
+            data = request.body
+            status = 200
+            if data.find('TOP') == -1:
+                return (status, headers, '{}')
+            else:
+                return (status, headers, '%s'%json.dumps(mockdata))
         # Mock the reponse
         httpretty.register_uri(
             httpretty.POST, QUERY_URL,
             content_type='application/json',
             status=200,
-            body='{}')
+            body=request_callback)
         # Do the POST request
         r = self.client.post(
             url_for('objectsearch'),
             content_type='application/json',
             data=json.dumps({'identifiers': identifiers}))
         # See if we received the expected results
-        print r.json
         self.assertEqual(r.json['Error'], 'Unable to get results!')
         self.assertEqual(r.json['Error Info'], 'Bad data returned by SIMBAD')
 
@@ -91,12 +105,20 @@ class TestExpectedResults(TestCase):
     def test_object_search_empty_list(self):
         '''Test to see if an empty id list is processed correctly'''
         QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
+        mockdata =  {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"]]}
+        def request_callback(request, uri, headers):
+            data = request.body
+            status = 200
+            if data.find('TOP') == -1:
+                return (status, headers, '{}')
+            else:
+                return (status, headers, '%s'%json.dumps(mockdata))
         # Mock the reponse
         httpretty.register_uri(
             httpretty.POST, QUERY_URL,
             content_type='application/json',
             status=200,
-            body='{}')
+            body=request_callback)
         # Do the POST request
         r = self.client.post(
             url_for('objectsearch'),
@@ -154,7 +176,11 @@ class TestExpectedResults(TestCase):
     def test_position_search_NED_SIMBAD_error(self):
         '''Test to see if calling the position search endpoint
            works for valid data'''
+        mockdata =  {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"]]}
         def exceptionCallback(request, uri, headers):
+            data = request.body
+            if data.find('SELECT+TOP+1+') > -1:
+                return (200, headers, '%s'%json.dumps(mockdata))
             service = 'SIMBAD'
             if 'caltech' in uri:
                 service = 'NED'
@@ -185,7 +211,7 @@ class TestExpectedResults(TestCase):
         # The response should have a status code 200
         # See if we received the expected results
         expected = {'Error':'Unable to get results!',
-                    'Error Info':'SIMBAD position query blew up (Query to SIMBAD blew up!), NED cone search failed (Query to NED blew up!)'}
+                    'Error Info':'SIMBAD request failed (not timeout): Query to SIMBAD blew up!, NED cone search failed (Query to NED blew up!)'}
         self.assertEqual(r.json, expected)
 
     @httpretty.activate
@@ -326,7 +352,7 @@ class TestExpectedResults(TestCase):
                 "Error Info": 'Parsing the identifiers out of the query string blew up! (Something went wrong!)'}
         self.assertEqual(r.json, expected)
 
-    def test_object_search_unknown_source(self):
+    def object_search_unknown_source(self):
         '''Test to see if calling the object search endpoint
            with an unknown source throws an error'''
         # We will be doing a POST request with a set of identifiers

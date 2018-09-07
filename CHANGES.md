@@ -1,3 +1,7 @@
+### 1.0.59
+
+* Update of unittests
+
 ### 1.0.58
 
 * Fix for failing results verification in cone search
