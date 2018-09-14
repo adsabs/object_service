@@ -585,6 +585,65 @@ class TestDataRetrieval(TestCase):
         result = list(set([cleanup_object_name(o) for o in objects]))
         self.assertEqual(result, ['foobar'])
 
+    @httpretty.activate
+    def test_tap_verification(self):
+        '''Test if verification of TAP service works'''
+        from object_service.SIMBAD import verify_tap_service
+        QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
+        mockdata =  {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"]]}
+        def request_callback(request, uri, headers):
+            data = request.body
+            status = 200
+            return (status, headers, '%s'%json.dumps(mockdata))
+        # Mock the reponse
+        httpretty.register_uri(
+            httpretty.POST, QUERY_URL,
+            content_type='application/json',
+            status=200,
+            body=request_callback)
+        v = verify_tap_service()
+        self.assertEqual(v, QUERY_URL)
+
+    @httpretty.activate
+    def test_tap_verification_switch(self):
+        '''Test if verification of TAP service works: switch to CDS mirror on error'''
+        from object_service.SIMBAD import verify_tap_service
+        QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
+        mockdata =  {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"]]}
+        def request_callback(request, uri, headers):
+            data = request.body
+            status = 500
+            return (status, headers, '%s'%json.dumps(mockdata))
+        # Mock the reponse
+        httpretty.register_uri(
+            httpretty.POST, QUERY_URL,
+            content_type='application/json',
+            status=200,
+            body=request_callback)
+        v = verify_tap_service()
+        expected = self.app.config.get('OBJECTS_SIMBAD_TAP_URL_CDS')
+        self.assertEqual(v, expected)
+
+    @httpretty.activate
+    def test_tap_verification_switch_2(self):
+        '''Test if verification of TAP service works: switch to CDS mirror on no data'''
+        from object_service.SIMBAD import verify_tap_service
+        QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
+        emptydata=  {"data":[]}
+        def request_callback(request, uri, headers):
+            data = request.body
+            status = 200
+            return (status, headers, '%s'%json.dumps(emptydata))
+        # Mock the reponse
+        httpretty.register_uri(
+            httpretty.POST, QUERY_URL,
+            content_type='application/json',
+            status=200,
+            body=request_callback)
+        v = verify_tap_service()
+        expected = self.app.config.get('OBJECTS_SIMBAD_TAP_URL_CDS')
+        self.assertEqual(v, expected)
+
 @timeout_decorator.timeout(2)
 def timeout(s):
     time.sleep(s)

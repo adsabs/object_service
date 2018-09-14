@@ -90,6 +90,87 @@ class TestDataRetrieval(TestCase):
             body=exceptionCallback)
         result = get_object_translations(['a'],['simbad'])
         self.assertEqual(result, {'simbad': {'a': '0'}})
+    
+    @httpretty.activate   
+    def test_verify_query(self):
+        '''Test if verification of objects against Solr index works'''
+        from object_service.utils import verify_query
+        QUERY_URL = self.app.config.get('OBJECTS_SOLRQUERY_URL')
+        mockdata = {"response":{
+            "docs":["a","b","c"]
+        }}
+        ids = ["a", "b"]
+        def request_callback(request, uri, headers):
+            data = request.body
+            status = 200
+            return (status, headers, '%s'%json.dumps(mockdata))
+        # Mock the reponse
+        httpretty.register_uri(
+            httpretty.GET, QUERY_URL,
+            content_type='application/json',
+            body=request_callback)
+        v = verify_query(ids, "simbid")
+        self.assertEqual(v, True)
+
+    @httpretty.activate   
+    def test_verify_query_empty(self):
+        '''Test if verification of objects against Solr index works'''
+        from object_service.utils import verify_query
+        QUERY_URL = self.app.config.get('OBJECTS_SOLRQUERY_URL')
+        mockdata = {"response":{
+            "docs":[]
+        }}
+        ids = ["a", "b"]
+        def request_callback(request, uri, headers):
+            data = request.body
+            status = 200
+            return (status, headers, '%s'%json.dumps(mockdata))
+        # Mock the reponse
+        httpretty.register_uri(
+            httpretty.GET, QUERY_URL,
+            content_type='application/json',
+            body=request_callback)
+        v = verify_query(ids, "simbid")
+        self.assertEqual(v, False)
+
+    @httpretty.activate   
+    def test_verify_query_invalid(self):
+        '''Test if verification of objects against Solr index works'''
+        from object_service.utils import verify_query
+        QUERY_URL = self.app.config.get('OBJECTS_SOLRQUERY_URL')
+        mockdata = {"response":{}}
+        ids = ["a", "b"]
+        def request_callback(request, uri, headers):
+            data = request.body
+            status = 200
+            return (status, headers, '%s'%json.dumps(mockdata))
+        # Mock the reponse
+        httpretty.register_uri(
+            httpretty.GET, QUERY_URL,
+            content_type='application/json',
+            body=request_callback)
+        v = verify_query(ids, "simbid")
+        self.assertEqual(v, False)
+
+    @httpretty.activate   
+    def test_verify_query_error(self):
+        '''Test if verification of objects against Solr index works'''
+        from object_service.utils import verify_query
+        QUERY_URL = self.app.config.get('OBJECTS_SOLRQUERY_URL')
+        mockdata = {}
+        ids = ["a", "b"]
+        def request_callback(request, uri, headers):
+            data = request.body
+            status = 500
+            return (status, headers, '%s'%json.dumps(mockdata))
+        # Mock the reponse
+        httpretty.register_uri(
+            httpretty.GET, QUERY_URL,
+            content_type='application/json',
+            body=request_callback)
+        v = verify_query(ids, "simbid")
+        expected = {'Status Code': 500, 'Error Info': 'Solr response: {}', 'Error': 'Unable to get results!'}
+        self.assertEqual(v, expected)
 
 if __name__ == '__main__':
     unittest.main()

@@ -102,6 +102,74 @@ class TestExpectedResults(TestCase):
         self.assertEqual(r.json['Error Info'], 'Bad data returned by SIMBAD')
 
     @httpretty.activate
+    def test_object_search_mirror_down(self):
+        '''Test to see if bad data from SIMBAD is processed correctly'''
+        QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
+        QUERY_URL_CDS = self.app.config.get('OBJECTS_SIMBAD_TAP_URL_CDS')
+        identifiers = ["3133169", "1575544"]
+        mockdata =  {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"]]}
+        def request_callback(request, uri, headers):
+            data = request.body
+            status = 200
+            if data.find('TOP') == -1:
+                return (200, headers, '%s'%json.dumps(mockdata))
+            else:
+                return (500, headers, '%s'%json.dumps(mockdata))
+        # Mock the reponse
+        httpretty.register_uri(
+            httpretty.POST, QUERY_URL,
+            content_type='application/json',
+            status=200,
+            body=request_callback)
+        httpretty.register_uri(
+            httpretty.POST, QUERY_URL_CDS,
+            content_type='application/json',
+            status=200,
+            body=request_callback)
+        # Do the POST request
+        r = self.client.post(
+            url_for('objectsearch'),
+            content_type='application/json',
+            data=json.dumps({'identifiers': identifiers}))
+        # See if we received the expected results
+        # The TAP URL should have been switched to the CDS mirror
+        self.assertEqual(self.app.config.get('OBJECTS_SIMBAD_TAP_URL'), self.app.config.get('OBJECTS_SIMBAD_TAP_URL_CDS'))
+
+    @httpretty.activate
+    def test_object_search_mirror_exception(self):
+        '''Test to see if bad data from SIMBAD is processed correctly'''
+        QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
+        QUERY_URL_CDS = self.app.config.get('OBJECTS_SIMBAD_TAP_URL_CDS')
+        identifiers = ["3133169", "1575544"]
+        mockdata =  {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"]]}
+        def request_callback(request, uri, headers):
+            data = request.body
+            status = 200
+            if data.find('TOP') == -1:
+                return (200, headers, '%s'%json.dumps(mockdata))
+            else:
+                raise Exception('Problem with CfA TAP service!')
+        # Mock the reponse
+        httpretty.register_uri(
+            httpretty.POST, QUERY_URL,
+            content_type='application/json',
+            status=200,
+            body=request_callback)
+        httpretty.register_uri(
+            httpretty.POST, QUERY_URL_CDS,
+            content_type='application/json',
+            status=200,
+            body=request_callback)
+        # Do the POST request
+        r = self.client.post(
+            url_for('objectsearch'),
+            content_type='application/json',
+            data=json.dumps({'identifiers': identifiers}))
+        # See if we received the expected results
+        # The TAP URL should have been switched to the CDS mirror
+        self.assertEqual(self.app.config.get('OBJECTS_SIMBAD_TAP_URL'), self.app.config.get('OBJECTS_SIMBAD_TAP_URL_CDS'))
+
+    @httpretty.activate
     def test_object_search_empty_list(self):
         '''Test to see if an empty id list is processed correctly'''
         QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')

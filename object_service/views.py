@@ -33,13 +33,8 @@ class ObjectSearch(Resource):
     def post(self):
         stime = time.time()
         # Verify which TAP service to use
-        try:
-            u = verify_tap_service()
-            current_app.config['OBJECTS_SIMBAD_TAP_URL'] = u
-        except:
-            # This is not supposed to throw an exception, but
-            # if so, we continue with the CDS TAP service
-            current_app.config['OBJECTS_SIMBAD_TAP_URL'] = current_app.config.get('OBJECTS_SIMBAD_TAP_URL_CDS')
+        u = verify_tap_service()
+        current_app.config['OBJECTS_SIMBAD_TAP_URL'] = u
         # Get the supplied list of identifiers
         identifiers = []
         input_type = None
