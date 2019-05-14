@@ -135,20 +135,20 @@ def get_object_translations(onames, trgts):
 def translate_query(solr_query, oqueries, trgts, onames, translations):
     # The goal is to translate the original Solr query with the embedded
     # "object:" queries into a Solr query with actual Solr fields
-    # (nedid:, simbid:) and to include an "abs:" query to simulate the
+    # (nedid:, simbid:) and to include an "=abs:" query to simulate the
     # "ADS Objects" search from ADS Classic. The following will be the general patterns
     # a. single object name:
-    #      object:Andromeda    --> (simbid:translations['simbid'].get("Andromeda","0") OR nedid:translations['nedid'].get("Andromeda","0") OR abs:"Andromeda") database:astronomy
+    #      object:Andromeda    --> (simbid:translations['simbid'].get("Andromeda","0") OR nedid:translations['nedid'].get("Andromeda","0") OR =abs:"Andromeda") database:astronomy
     # b. object name as phrase
     #      object:"Large Magellanic Cloud"  --> same idea as under a.
     # c. object query as expression
     #      object:(Boolean expression) like object:(("51 Peg b" OR 16CygB) AND Osiris) -->
-    #      (simbid:(boolean expression of simbid translations) OR nedid:(boolean expression of nedid translations) OR abs:(original boolean)) database:astronomy
+    #      (simbid:(boolean expression of simbid translations) OR nedid:(boolean expression of nedid translations) OR =abs:(original boolean)) database:astronomy
     # The approach is then
     # For each of the N object query components O_i (i=1,...,N) parsed out of the original Solr query S, create their translated equivalent
     # T_i (i=1,...,N) and do a replacement S.replace(O_i, T_i)
     for oquery in oqueries:
-        query_components = [oquery.replace('object:','abs:')]
+        query_components = [oquery.replace('object:','=abs:')]
         simbad_query = oquery.replace('object:','simbid:')
         ned_query    = oquery.replace('object:','nedid:')
         for oname in onames:

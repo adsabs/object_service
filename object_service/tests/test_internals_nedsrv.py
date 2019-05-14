@@ -10,6 +10,9 @@ import time
 from object_service import app
 import json
 import httpretty
+import datetime
+
+now = datetime.datetime.now()
 
 
 class TestDataRetrieval(TestCase):
@@ -329,7 +332,7 @@ class TestDataRetrieval(TestCase):
         # Now run the query
         result = get_NED_refcodes(obj_data)
         expected = {"Error": "Unable to get results!", 
-                    "Error Info": "No bibcodes returned for query: nedid:FOO_BAR year:1800-2018 bibstem:(ApJ OR A&A) property:refereed"}
+                    "Error Info": "No bibcodes returned for query: nedid:FOO_BAR year:1800-%s bibstem:(ApJ OR A&A) property:refereed"%now.year}
         self.assertEqual(result, expected) 
     
     @httpretty.activate

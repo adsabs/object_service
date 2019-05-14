@@ -30,7 +30,7 @@ class TestQueryStringParsing(TestCase):
             'object:Foo OR object:Bar':[['Foo', 'Bar'],['object:Foo','object:Bar']],
             'object:("Foo Bar" OR Something)':[['Foo Bar', 'Something'],['object:("Foo Bar" OR Something)']],
             'mod1:bar object:(Bla OR Something) mod2:foo object:(X OR Y)':[['Bla', 'Something', 'X', 'Y'],['object:(Bla OR Something)', 'object:(X OR Y)']],
-            'citations(reviews(popular(object:("M 1" OR M81) OR abs:Andromeda))) year:2010 property:refereed': [['M 1', 'M81'],['object:("M 1" OR M81)']],
+            'citations(reviews(popular(object:("M 1" OR M81) OR =abs:Andromeda))) year:2010 property:refereed': [['M 1', 'M81'],['object:("M 1" OR M81)']],
             }
 
         for qstring, expected in test_cases.items():
@@ -51,9 +51,9 @@ class TestQueryStringParsing(TestCase):
         }
         
         test_cases = {
-            'object:X':'((abs:X OR simbid:123 OR nedid:XXX) database:astronomy)',
-            'object:(X OR Y)':'((abs:(X OR Y) OR simbid:(123 OR 456) OR nedid:(XXX OR YYY)) database:astronomy)',
-            'citations(object:(X OR Y) OR fulltext:X) -foo:bar object:Z':'citations(((abs:(X OR Y) OR simbid:(123 OR 456) OR nedid:(XXX OR YYY)) database:astronomy) OR fulltext:X) -foo:bar ((abs:Z OR simbid:789 OR nedid:0) database:astronomy)'
+            'object:X':'((=abs:X OR simbid:123 OR nedid:XXX) database:astronomy)',
+            'object:(X OR Y)':'((=abs:(X OR Y) OR simbid:(123 OR 456) OR nedid:(XXX OR YYY)) database:astronomy)',
+            'citations(object:(X OR Y) OR fulltext:X) -foo:bar object:Z':'citations(((=abs:(X OR Y) OR simbid:(123 OR 456) OR nedid:(XXX OR YYY)) database:astronomy) OR fulltext:X) -foo:bar ((=abs:Z OR simbid:789 OR nedid:0) database:astronomy)'
         }
         
         for qstring, expected in test_cases.items():
