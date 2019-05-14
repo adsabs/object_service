@@ -349,7 +349,7 @@ class TestExpectedResults(TestCase):
             data=json.dumps({'query': query}))
         # The response should have a status code 200
         # See if we received the expected results
-        expected = {'query': 'bibstem:A&A ((abs:Andromeda OR simbid:1575544 OR nedid:Andromeda) database:astronomy) year:2015'}
+        expected = {'query': 'bibstem:A&A ((=abs:Andromeda OR simbid:1575544 OR nedid:Andromeda) database:astronomy) year:2015'}
         self.assertEqual(r.json, expected)
 
     @httpretty.activate
@@ -386,7 +386,7 @@ class TestExpectedResults(TestCase):
             data=json.dumps({'query': query}))
         # The response should have a status code 200
         # See if we received the expected results
-        expected = {'query': 'bibstem:A&A ((abs:Andromeda OR simbid:1575544 OR nedid:Andromeda) database:astronomy) year:2015'}
+        expected = {'query': 'bibstem:A&A ((=abs:Andromeda OR simbid:1575544 OR nedid:Andromeda) database:astronomy) year:2015'}
         self.assertEqual(r.json, expected)
 
     def test_object_search_empty_query(self):

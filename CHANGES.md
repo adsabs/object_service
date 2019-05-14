@@ -1,6 +1,10 @@
+### 1.0.61
+
+* Switched off synonym replacement for ADS metadata search
+
 ### 1.0.60
 
-* Iproved coverage of unittests
+* Improved coverage of unittests
 
 ### 1.0.59
 
