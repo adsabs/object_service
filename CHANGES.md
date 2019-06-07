@@ -1,3 +1,7 @@
+### 1.0.62
+
+* Switch to https for all queries to NED and SIMBAD
+
 ### 1.0.61
 
 * Switched off synonym replacement for ADS metadata search
