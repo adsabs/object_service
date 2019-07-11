@@ -164,6 +164,15 @@ def translate_query(solr_query, oqueries, trgts, onames, translations):
         solr_query = solr_query.replace(oquery, "(({0}) database:astronomy)".format(" OR ".join(query_components)))
     return solr_query
 
+def is_number(n):
+    try:
+        float(n)   # Type-casting the string to `float`.
+                   # If string is not a valid `float`, 
+                   # it'll raise `ValueError` exception
+    except ValueError:
+        return False
+    return True
+
 def parse_position_string(pstring):
     # In the case of a cone search, we will have received a query of the form
     #   object:"<position>(:<radius>)"
@@ -171,28 +180,50 @@ def parse_position_string(pstring):
     search_radius = ''
     if pstring.find(':') > -1:
         position, radius = pstring.split(':')
+        radius = radius.rstrip().replace("''",'"')
+    else:
+        position = pstring.strip()
+        radius = ''
+
+    if is_number(radius):
+        # A single integer or float was specified: unit is "degrees"
+        search_radius = Angle('{0} degrees'.format(radius.strip()))
+    elif radius.endswith("'") or radius.endswith('"'):
+        # The radius ends with a single or double quote: arcsec or arcmin
+        search_radius = Angle(radius)
+    elif radius.count(' ') in [1,2]:
+        # Sexagesimal format is assumed: (degree, arcmin, arcsec)
         try:
-            search_radius = Angle('{0} degrees'.format(radius.strip()))
+            c = tuple(map(int, radius.split()))
+            search_radius = Angle(c, unit=u.deg)
         except:
             pass
     else:
-        position = pstring.strip()
+        search_radius = ''
+    # Check if we have a search radius
     if not search_radius:
+        # If not, take the default value
         search_radius = Angle('{0} degrees'.format(current_app.config.get('OBJECTS_DEFAULT_RADIUS')))
     # Now try to parse the position string using astropy
-    err = ''
-    try:
-        coords = SkyCoord(position, frame='icrs')
-    except Exception, err:
-        # Maybe we got an unformatted position string, so don't just quit yet
-        pass
-    if err:
-        try:
-            # Try parsing as an unformatted position string (assuming decimal coordinate format)
-            coords = SkyCoord(position, unit=(u.deg, u.deg))
-        except:
-            # Now we fail for real!
-            raise IncorrectPositionFormatError
+    coords = None
+    if position.count(" ") == 5:
+        # We have a position: 05 23 34.6 -69 45 22
+        coords = SkyCoord(position, unit=(u.hourangle, u.deg))
+    elif position.count(" ") == 1:
+        ra, dec = position.split()
+        if is_number(ra) and is_number(dec):
+            # We have a position: 80.894167 -69.756111
+            coords = SkyCoord(float(ra), float(dec), frame='icrs', unit='deg')
+        else:
+            # Assume that we have: 05h23m34.6s -69d45m22s
+            try:
+                coords = SkyCoord(ra, dec, frame='icrs')
+            except:
+                pass
+    # If we don't have a valid position by now, raise an exception
+    if not coords:
+        raise IncorrectPositionFormatError
+
     return coords, search_radius
 
 def verify_query(identifiers, field):

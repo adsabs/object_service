@@ -574,7 +574,7 @@ class TestDataRetrieval(TestCase):
         pstring = "18 04 20.99 -29 31 08.9"
         coords, radius = parse_position_string(pstring)
         RA, DEC = coords.to_string('decimal').split()
-        self.assertEqual([RA, DEC, radius.degree], [u'18.0725', u'-29.5191', default_radius])
+        self.assertEqual([RA, DEC, radius.degree], [u'271.087', u'-29.5191', default_radius])
 
     def test_cleanup_obhect_names_simbad(self):
         '''Test to see if SIMBAD cleans up object string correctly'''
