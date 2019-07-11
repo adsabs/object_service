@@ -1,3 +1,7 @@
+### 1.0.63
+
+* Cone search fix and restriction of allowed coordinate formats
+
 ### 1.0.62
 
 * Switch to https for all queries to NED and SIMBAD
