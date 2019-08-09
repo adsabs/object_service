@@ -5,9 +5,9 @@ LOG_STDOUT = True
 OBJECTS_API_TOKEN = 'this should be changed'
 # URL to access the SIMBAB TAP interface
 # default
-OBJECTS_SIMBAD_TAP_URL = 'https://simbad.harvard.edu/simbad/sim-tap/sync'
+OBJECTS_SIMBAD_TAP_URL = 'http://simbad.harvard.edu/simbad/sim-tap/sync'
 # backup
-OBJECTS_SIMBAD_TAP_URL_CDS = 'https://simbad.u-strasbg.fr/simbad/sim-tap/sync'
+OBJECTS_SIMBAD_TAP_URL_CDS = 'http://simbad.u-strasbg.fr/simbad/sim-tap/sync'
 # Maximum search radius for SIMBAD (degrees)
 OBJECTS_SIMBAD_MAX_RADIUS = 3
 # Maximum number of objects for SIMBAD
