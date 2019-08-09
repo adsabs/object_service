@@ -176,6 +176,7 @@ class QuerySearch(Resource):
             result['simbad'] = sids
             if 'Error' in result['simbad']:
                 simbad_fail = result['simbad']['Error Info']
+                result['simbad'] = []
             nids = ned_position_query(coordinates, radius)
             if len(nids) > 0:
                 vq = verify_query(nids, 'nedid')
@@ -186,6 +187,7 @@ class QuerySearch(Resource):
             result['ned'] = nids
             if 'Error' in result['ned']:
                 ned_fail = result['ned']['Error Info']
+                result['ned'] = []
             # If both SIMBAD and NED errored out, return an error
             if simbad_fail and ned_fail:
                 return {"Error": "Unable to get results!", 

@@ -1,3 +1,7 @@
+### 1.0.64
+
+* Better error handling for failed cone search
+
 ### 1.0.63
 
 * Cone search fix and restriction of allowed coordinate formats
