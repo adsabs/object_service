@@ -138,7 +138,7 @@ class QuerySearch(Resource):
             targets = ['simbad', 'ned']
         # Get the object names and individual object queries from the Solr query
         try:
-            object_names, object_queries = parse_query_string(solr_query)
+            object_names, object_queries = parse_query_string(solr_query.replace('^',''))
         except Exception, err:
             current_app.logger.error('Parsing the identifiers out of the query string blew up!')
             return {"Error": "Unable to get results!",

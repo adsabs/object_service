@@ -1,3 +1,7 @@
+### 1.0.65
+
+* Fix bug when there is a caret in the query string
+
 ### 1.0.64
 
 * Better error handling for failed cone search
