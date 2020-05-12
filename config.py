@@ -2,7 +2,6 @@
 import os
 LOG_STDOUT = True
 # Configs specific to this ervice
-OBJECTS_API_TOKEN = 'this should be changed'
 # URL to access the SIMBAB TAP interface
 # default
 OBJECTS_SIMBAD_TAP_URL = 'http://simbad.harvard.edu/simbad/sim-tap/sync'

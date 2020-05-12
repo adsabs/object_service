@@ -1,5 +1,5 @@
 import requests
-from flask import current_app
+from flask import current_app, request
 
 requests.packages.urllib3.disable_warnings()
 
@@ -19,7 +19,7 @@ class Client:
         """
 
         self.session = requests.Session()
-        self.token = config.get('OBJECTS_API_TOKEN')
+        self.token = request.headers.get('X-Forwarded-Authorization', request.headers.get('Authorization', None))
         if self.token:
             self.session.headers.update(
                 {'Authorization': 'Bearer %s' % self.token}
