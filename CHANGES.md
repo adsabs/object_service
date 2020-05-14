@@ -1,3 +1,6 @@
+### 1.0.66
+* Removed service token, the service will use user's credentials
+
 ### 1.0.65
 
 * Fix bug when there is a caret in the query string
