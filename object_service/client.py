@@ -3,7 +3,7 @@ from flask import current_app, request
 
 requests.packages.urllib3.disable_warnings()
 
-client = lambda: Client(current_app.config).session
+client = lambda: Client(current_app.config)
 
 
 class Client:
@@ -19,8 +19,18 @@ class Client:
         """
 
         self.session = requests.Session()
-        self.token = request.headers.get('X-Forwarded-Authorization', request.headers.get('Authorization', None))
-        if self.token:
-            self.session.headers.update(
-                {'Authorization': 'Bearer %s' % self.token}
-            )
+
+    def _sanitize(self, *args, **kwargs):
+        headers = kwargs.get('headers', {})
+        if 'Authorization' not in headers:
+            headers['Authorization'] = current_app.config.get('SERVICE_TOKEN', request.headers.get('X-Forwarded-Authorization', request.headers.get('Authorization', None)))
+        kwargs['headers'] = headers
+
+    def get(self, *args, **kwargs):
+        self._sanitize(*args, **kwargs)
+        return self.session.get(*args, **kwargs)
+    
+    def post(self, *args, **kwargs):
+        self._sanitize(*args, **kwargs)
+        return self.session.post(*args, **kwargs)
+
