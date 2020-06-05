@@ -20,17 +20,18 @@ class Client:
 
         self.session = requests.Session()
 
-    def _sanitize(self, *args, **kwargs):
+    def _sanitize(self, args, kwargs):
         headers = kwargs.get('headers', {})
         if 'Authorization' not in headers:
-            headers['Authorization'] = current_app.config.get('SERVICE_TOKEN', request.headers.get('X-Forwarded-Authorization', request.headers.get('Authorization', None)))
+            headers['Authorization'] = current_app.config.get('SERVICE_TOKEN', None) or request.headers.get('X-Forwarded-Authorization', request.headers.get('Authorization', None))
         kwargs['headers'] = headers
+        return (args, kwargs)
 
     def get(self, *args, **kwargs):
-        self._sanitize(*args, **kwargs)
+        args, kwargs = self._sanitize(args, kwargs)
         return self.session.get(*args, **kwargs)
     
     def post(self, *args, **kwargs):
-        self._sanitize(*args, **kwargs)
+        args, kwargs = self._sanitize(args, kwargs)
         return self.session.post(*args, **kwargs)
 

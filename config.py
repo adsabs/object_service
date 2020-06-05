@@ -1,5 +1,10 @@
 # necessary import
 import os
+
+# must be here for adsmutils to override it using env vars
+# but if left empty (resolving to False) it won't be used
+SERVICE_TOKEN = None
+
 LOG_STDOUT = True
 # Configs specific to this ervice
 # URL to access the SIMBAB TAP interface
