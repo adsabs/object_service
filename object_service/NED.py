@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 import re
 import sys
 import traceback
@@ -7,7 +8,7 @@ import json
 from requests.exceptions import ConnectTimeout, ReadTimeout, ConnectionError
 import timeout_decorator
 import datetime
-from client import client
+from .client import client
 
 def do_ned_object_lookup(url, oname):
     # Prepare the headers for the query
@@ -26,7 +27,7 @@ def do_ned_object_lookup(url, oname):
     except (ConnectTimeout, ReadTimeout) as err:
         current_app.logger.info('NED request to %s timed out! Request took longer than %s second(s)'%(url, TIMEOUT))
         return {"Error": "Unable to get results!", "Error Info": "NED request timed out: {0}".format(str(err))}
-    except Exception, err:
+    except Exception as err:
         current_app.logger.error("NED request to %s failed (%s)"%(url, err))
         return {"Error": "Unable to get results!", "Error Info": "NED request failed ({0})".format(err)}
     # Check if we got a 200 status code back
@@ -138,7 +139,7 @@ def ned_position_query(COORD, RADIUS):
     except (ConnectTimeout, ReadTimeout) as err:
         current_app.logger.info('NED cone search to %s timed out! Request took longer than %s second(s)'%(QUERY_URL, TIMEOUT))
         return {"Error": "Unable to get results!", "Error Info": "NED cone search timed out: {0}".format(str(err))}
-    except Exception, err:
+    except Exception as err:
         current_app.logger.error("NED cone search to %s failed (%s)"%(QUERY_URL, err))
         return {"Error": "Unable to get results!", "Error Info": "NED cone search failed ({0})".format(err)}
     data = response.text.split('\n')
@@ -186,7 +187,7 @@ def get_NED_refcodes(obj_data):
         except (ConnectTimeout, ReadTimeout) as err:
             current_app.logger.info('NED request to %s timed out! Request took longer than %s second(s)'%(ned_url, TIMEOUT))
             return {"Error": "Unable to get results!", "Error Info": "NED request timed out: {0}".format(str(err))}
-        except Exception, err:
+        except Exception as err:
             current_app.logger.error("NED request to %s failed (%s)"%(ned_url, err))
             return {"Error": "Unable to get results!", "Error Info": "NED request failed ({0})".format(err)}
         # Check if we got a 200 status code back
@@ -216,11 +217,11 @@ def get_NED_refcodes(obj_data):
     date_range = "{0}-{1}".format(obj_data.get('start_year', str(1800)), obj_data.get('end_year', str(datetime.datetime.now().year)))
     q += ' year:{0}'.format(date_range)
     # Did we get a bibstem filter?
-    if obj_data.has_key('journals'):
+    if 'journals' in obj_data:
         jrnl_list = " OR ".join(map(lambda a: "%s" % a, obj_data['journals']))
         q += ' bibstem:({0})'.format(jrnl_list)
     # Do we want refereed publications only?
-    if obj_data.has_key('refereed_status'):
+    if 'refereed_status' in obj_data:
         q += ' property:{0}'.format(obj_data['refereed_status'])
     # Get the information from Solr
     headers = {'X-Forwarded-Authorization': request.headers.get('Authorization')}

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 import os
 from flask_testing import TestCase
@@ -495,8 +496,8 @@ class TestDataRetrieval(TestCase):
         c = SkyCoord("80.89416667 -69.7561111", unit=(u.deg, u.deg))
         r = Angle('0.2 degrees')
         result = simbad_position_query(c, r)
-        print "XXXX"
-        print result
+        print("XXXX")
+        print(result)
         expected = {'Error Info': 'SIMBAD request failed (not timeout): Oops! Something went boink!', 'Error': u'Unable to get results!'}
         self.assertDictEqual(result, expected)
 

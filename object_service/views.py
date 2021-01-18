@@ -1,21 +1,22 @@
+from __future__ import absolute_import
 from flask import current_app, request
 from flask_restful import Resource
 from flask_discoverer import advertise
 from flask import Response
-from SIMBAD import get_simbad_data
-from SIMBAD import simbad_position_query
-from SIMBAD import verify_tap_service
+from .SIMBAD import get_simbad_data
+from .SIMBAD import simbad_position_query
+from .SIMBAD import verify_tap_service
 
-from NED import get_ned_data
-from NED import get_NED_refcodes
-from NED import ned_position_query
+from .NED import get_ned_data
+from .NED import get_NED_refcodes
+from .NED import ned_position_query
 
-from utils import parse_query_string
-from utils import get_object_translations
-from utils import translate_query
-from utils import isBalanced
-from utils import parse_position_string
-from utils import verify_query
+from .utils import parse_query_string
+from .utils import get_object_translations
+from .utils import translate_query
+from .utils import isBalanced
+from .utils import parse_position_string
+from .utils import verify_query
 
 import time
 import timeout_decorator
@@ -139,7 +140,7 @@ class QuerySearch(Resource):
         # Get the object names and individual object queries from the Solr query
         try:
             object_names, object_queries = parse_query_string(solr_query.replace('^',''))
-        except Exception, err:
+        except Exception as err:
             current_app.logger.error('Parsing the identifiers out of the query string blew up!')
             return {"Error": "Unable to get results!",
                     "Error Info": "Parsing the identifiers out of the query string blew up! (%s)"%str(err)}, 200

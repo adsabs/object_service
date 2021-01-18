@@ -1,9 +1,10 @@
-import luqum
-from luqum.parser import parser
-from luqum.utils import LuceneTreeTransformer
-from NED import get_ned_data
-from SIMBAD import get_simbad_data
-from client import client
+from __future__ import absolute_import
+from . import luqum
+from .luqum.parser import parser
+from .luqum.utils import LuceneTreeTransformer
+from .NED import get_ned_data
+from .SIMBAD import get_simbad_data
+from .client import client
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.coordinates import Angle
@@ -84,7 +85,7 @@ def parse_query_string(query_string):
     # First create the query tree
     try:
         query_tree = parser.parse(query_string)
-    except Exception, err:
+    except Exception as err:
         current_app.logger.error('Parsing query string blew up: %s'%str(err))
         return [], []
     # Instantiate the object that will be used to traverse the tree

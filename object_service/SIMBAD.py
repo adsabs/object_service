@@ -29,7 +29,7 @@ def do_tap_query(query, search_type, maxrec):
     except (ConnectTimeout, ReadTimeout) as err:
         current_app.logger.info('SIMBAD request to %s timed out! Request took longer than %s second(s)'%(QUERY_URL, TIMEOUT))
         return {"Error": "Unable to get results!", "Error Info": "SIMBAD request timed out: {0}".format(err)}
-    except Exception, err:
+    except Exception as err:
         current_app.logger.error("SIMBAD request to %s failed (%s)"%(QUERY_URL, err))
         return {"Error": "Unable to get results!", "Error Info": "SIMBAD request failed (not timeout): %s"%err}
     # Report if the SIMBAD server did not like our query
@@ -122,6 +122,6 @@ def simbad_position_query(COORD, RADIUS):
         return r
     try:
         simbids = list(set([str(d[0]) for d in r['data']]))
-    except Exception, err:
+    except Exception as err:
         return {'Error': 'Unable to get results!', 'Error Info': 'Unable to retrieve SIMBAD identifiers from SIMBAD response (no "data" key)!'}
     return simbids
