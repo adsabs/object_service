@@ -1,11 +1,12 @@
 from __future__ import absolute_import
+from builtins import str
 import re
 import sys
 import traceback
 from flask import current_app
 from flask import request
 import json
-from requests.exceptions import ConnectTimeout, ReadTimeout, ConnectionError
+from requests.exceptions import Timeout, ConnectTimeout, ReadTimeout, ConnectionError
 import timeout_decorator
 import datetime
 from .client import client
@@ -184,7 +185,7 @@ def get_NED_refcodes(obj_data):
         # (if known to NED)
         try:
             r = current_app.client.post(ned_url, data=json.dumps(payload), headers=headers, timeout=TIMEOUT)
-        except (ConnectTimeout, ReadTimeout) as err:
+        except (ConnectTimeout, ReadTimeout, Timeout) as err:
             current_app.logger.info('NED request to %s timed out! Request took longer than %s second(s)'%(ned_url, TIMEOUT))
             return {"Error": "Unable to get results!", "Error Info": "NED request timed out: {0}".format(str(err))}
         except Exception as err:
@@ -211,14 +212,14 @@ def get_NED_refcodes(obj_data):
             canonicals.append(ned_data['Preferred']['Name'].strip())
     # We retrieve bibcodes with one Solr query, using "nedid:" (we use canonical object names as identifiers,
     # with spaces replaced by underscores)
-    obj_list = " OR ".join(map(lambda a: "nedid:%s" % a.replace(' ','_'), canonicals))
+    obj_list = " OR ".join(["nedid:%s" % a.replace(' ','_') for a in canonicals])
     q = '%s' % obj_list
     # Format the date range for filtering: year:YYYY-YYYY
     date_range = "{0}-{1}".format(obj_data.get('start_year', str(1800)), obj_data.get('end_year', str(datetime.datetime.now().year)))
     q += ' year:{0}'.format(date_range)
     # Did we get a bibstem filter?
     if 'journals' in obj_data:
-        jrnl_list = " OR ".join(map(lambda a: "%s" % a, obj_data['journals']))
+        jrnl_list = " OR ".join(["%s" % a for a in obj_data['journals']])
         q += ' bibstem:({0})'.format(jrnl_list)
     # Do we want refereed publications only?
     if 'refereed_status' in obj_data:

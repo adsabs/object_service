@@ -11,6 +11,7 @@ import json
 import httpretty
 import mock
 from requests.exceptions import ConnectTimeout, ReadTimeout
+import pytest
 
 class TestExpectedResults(TestCase):
 
@@ -55,7 +56,7 @@ class TestExpectedResults(TestCase):
         def request_callback(request, uri, headers):
             data = request.body
             status = 200
-            if data.find('TOP') == -1:
+            if data.decode('utf-8').find('TOP') == -1:
                 status = 500
             return (status, headers, '%s'%json.dumps(mockdata))
         # Mock the reponse
@@ -82,7 +83,7 @@ class TestExpectedResults(TestCase):
         def request_callback(request, uri, headers):
             data = request.body
             status = 200
-            if data.find('TOP') == -1:
+            if data.decode("utf-8").find('TOP') == -1:
                 return (status, headers, '{}')
             else:
                 return (status, headers, '%s'%json.dumps(mockdata))
@@ -111,7 +112,7 @@ class TestExpectedResults(TestCase):
         def request_callback(request, uri, headers):
             data = request.body
             status = 200
-            if data.find('TOP') == -1:
+            if data.decode("utf-8").find('TOP') == -1:
                 return (200, headers, '%s'%json.dumps(mockdata))
             else:
                 return (500, headers, '%s'%json.dumps(mockdata))
@@ -145,7 +146,7 @@ class TestExpectedResults(TestCase):
         def request_callback(request, uri, headers):
             data = request.body
             status = 200
-            if data.find('TOP') == -1:
+            if data.decode("utf-8").find('TOP') == -1:
                 return (200, headers, '%s'%json.dumps(mockdata))
             else:
                 raise Exception('Problem with CfA TAP service!')
@@ -177,7 +178,7 @@ class TestExpectedResults(TestCase):
         def request_callback(request, uri, headers):
             data = request.body
             status = 200
-            if data.find('TOP') == -1:
+            if data.decode("utf-8").find('TOP') == -1:
                 return (status, headers, '{}')
             else:
                 return (status, headers, '%s'%json.dumps(mockdata))
@@ -206,6 +207,10 @@ class TestExpectedResults(TestCase):
         self.assertEqual(r.json['Error'], 'Unable to get results!')
         self.assertEqual(r.json['Error Info'], 'No identifiers/objects found in POST body')
 
+#    @httpretty.activate
+#    @pytest.mark.skip(reason='skipping for now')
+#    @mock.patch('object_service.NED.current_app.client.post')
+#    @mock.patch('object_service.SIMBAD.current_app.client.post')
     @httpretty.activate
     def test_position_search_200(self):
         '''Test to see if calling the position search endpoint
@@ -216,6 +221,11 @@ class TestExpectedResults(TestCase):
         # Define mock data to be returned to mock external NED query
         NED_QUERY_URL = self.app.config.get('OBJECTS_NED_OBJSEARCH')
         ned_mockdata = "\n".join(['bibcode1|Andromeda|foo|bar'])
+        # Define the mock data to be returned to mock the Solr verify request
+        SOLR_QUERY_URL = self.app.config.get('OBJECTS_SOLRQUERY_URL')
+        solr_mockdata = {"response":{
+            "docs":["a","b","c"]
+        }}
         # The test query we will provide
         query = 'bibstem:A&A object:"80.89416667 -69.75611111:0.166666" year:2015'
         # Mock the SIMBAD reponse
@@ -230,6 +240,12 @@ class TestExpectedResults(TestCase):
             content_type='text/plain',
             status=200,
             body='%s'%json.dumps(ned_mockdata))
+        # Mock the Solr reponse for the "verify" check
+        httpretty.register_uri(
+            httpretty.GET, SOLR_QUERY_URL,
+            content_type='application/json',
+            status=200,
+            body='%s'%json.dumps(solr_mockdata))
         # Do the POST request
         r = self.client.post(
             url_for('querysearch'),
@@ -237,40 +253,24 @@ class TestExpectedResults(TestCase):
             data=json.dumps({'query': query}))
         # The response should have a status code 200
         # See if we received the expected results
-        expected = {u'query': u'bibstem:A&A (simbid:(3253618 OR 1575544 OR 3133169) OR nedid:(Andromeda)) year:2015'}
-        self.assertEqual(r.json, expected)
+        check_strings = ['bibstem:A&A', '1575544', '3253618', '3133169', 'nedid:(Andromeda)', 'year:2015']
+        translated_query = r.json['query']
+        for s in check_strings:
+            self.assertIn(s, translated_query)
 
-    @httpretty.activate
-    def test_position_search_NED_SIMBAD_error(self):
+    @mock.patch('object_service.NED.current_app.client.get')
+    @mock.patch('object_service.SIMBAD.current_app.client.post')
+    def test_position_search_NED_SIMBAD_error(self, simbad_mock, ned_mock):
         '''Test to see if calling the position search endpoint
            works for valid data'''
-        mockdata =  {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"]]}
-        def exceptionCallback(request, uri, headers):
-            data = request.body
-            if data.find('SELECT+TOP+1+') > -1:
-                return (200, headers, '%s'%json.dumps(mockdata))
-            service = 'SIMBAD'
-            if 'caltech' in uri:
-                service = 'NED'
-            raise Exception('Query to {0} blew up!'.format(service))
         # Define mock data to be returned to mock external SIMBAD query
         SIMBAD_QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
-        simbad_mockdata =  {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"],[3253618, "NAME SMC", "NAME SMC"]]}
+        simbad_mock.side_effect = Exception('SIMBAD query blew up!')
         # Define mock data to be returned to mock external NED query
         NED_QUERY_URL = self.app.config.get('OBJECTS_NED_OBJSEARCH')
-        ned_mockdata = "\n".join(['bibcode1|Andromeda|foo|bar'])
+        ned_mock.side_effect = Exception('NED query blew up!')
         # The test query we will provide
         query = 'bibstem:A&A object:"80.89416667 -69.75611111:0.166666" year:2015'
-        # Mock the SIMBAD reponse
-        httpretty.register_uri(
-            httpretty.POST, SIMBAD_QUERY_URL,
-            content_type='application/json',
-            body=exceptionCallback)
-        # Mock the NED response
-        httpretty.register_uri(
-            httpretty.GET, NED_QUERY_URL,
-            content_type='text/plain',
-            body=exceptionCallback)
         # Do the POST request
         r = self.client.post(
             url_for('querysearch'),
@@ -278,8 +278,7 @@ class TestExpectedResults(TestCase):
             data=json.dumps({'query': query}))
         # The response should have a status code 200
         # See if we received the expected results
-        expected = {'Error':'Unable to get results!',
-                    'Error Info':'SIMBAD request failed (not timeout): Query to SIMBAD blew up!, NED cone search failed (Query to NED blew up!)'}
+        expected = {'Error': 'Unable to get results!', 'Error Info': 'SIMBAD request failed (not timeout): SIMBAD query blew up!, NED cone search failed (NED query blew up!)'}
         self.assertEqual(r.json, expected)
 
     @httpretty.activate
@@ -308,7 +307,7 @@ class TestExpectedResults(TestCase):
         # The response should have a status code 200
         self.assertTrue(r.status_code == 200)
         # See if we received the expected results
-        expected = {'LMC': {'id': '3133169', 'canonical': 'LMC'}, 
+        expected = {'LMC': {'id': '3133169', 'canonical': 'LMC'},
                     'Andromeda': {'id': '1575544', 'canonical': 'ANDROMEDA'},
                     '51 Peg b': {'id': '1471968', 'canonical': '51 Peg b'},
                     'Dimidium': {'id': '1471968', 'canonical': '51 Peg b'},
@@ -323,10 +322,10 @@ class TestExpectedResults(TestCase):
         simbad_mockdata =  {"data":[[1575544, "NAME ANDROMEDA","NAME ANDROMEDA"],[3133169, "NAME LMC", "NAME LMC"],[3253618, "NAME SMC", "NAME SMC"]]}
         # Define mock data to be returned to mock external NED query
         NED_QUERY_URL = self.app.config.get('OBJECTS_NED_URL')
-        ned_mockdata = {'NameResolver': 'NED-Egret', 
+        ned_mockdata = {'NameResolver': 'NED-Egret',
                         'Copyright': '(C) 2017 California Institute of Technology',
                         'Preferred': {'Name': 'Andromeda'},
-                        'ResultCode': 3, 
+                        'ResultCode': 3,
                         'StatusCode': 100}
         # The test query we will provide
         query = 'bibstem:A&A object:Andromeda year:2015'
