@@ -1,9 +1,12 @@
-import luqum
-from luqum.parser import parser
-from luqum.utils import LuceneTreeTransformer
-from NED import get_ned_data
-from SIMBAD import get_simbad_data
-from client import client
+from __future__ import absolute_import
+from builtins import map
+from builtins import str
+from . import luqum
+from .luqum.parser import parser
+from .luqum.utils import LuceneTreeTransformer
+from .NED import get_ned_data
+from .SIMBAD import get_simbad_data
+from .client import client
 from astropy import units as u
 from astropy.coordinates import SkyCoord
 from astropy.coordinates import Angle
@@ -53,7 +56,7 @@ class ObjectQueryExtractor(LuceneTreeTransformer):
 def isBalanced(s):
     """
     Checks if a string has balanced parentheses. This method can be easily extended to
-    include braces, curly brackets etc by adding the opening/closing equivalents 
+    include braces, curly brackets etc by adding the opening/closing equivalents
     in the obvious places.
     """
     expr = ''.join([x for x in s if x in '()'])
@@ -78,13 +81,13 @@ def parse_query_string(query_string):
     # We only accept Solr queries with balanced parentheses
     balanced = isBalanced(query_string)
     if not balanced:
-        current_app.logger.error('Unbalanced parentheses found in Solr query: %s'%query_string)        
+        current_app.logger.error('Unbalanced parentheses found in Solr query: %s'%query_string)
         return [], []
     # The query string is valid from the parenthese point-of-view
     # First create the query tree
     try:
         query_tree = parser.parse(query_string)
-    except Exception, err:
+    except Exception as err:
         current_app.logger.error('Parsing query string blew up: %s'%str(err))
         return [], []
     # Instantiate the object that will be used to traverse the tree
@@ -105,7 +108,7 @@ def get_object_data(identifiers, service):
     elif service == 'ned':
         object_data = get_ned_data(identifiers, 'objects')
     else:
-        object_data = {'Error':'Unable to get object data', 
+        object_data = {'Error':'Unable to get object data',
                        'Error Info':'Do not have method to get object data for this service: {0}'.format(service)}
     return object_data
 
@@ -167,7 +170,7 @@ def translate_query(solr_query, oqueries, trgts, onames, translations):
 def is_number(n):
     try:
         float(n)   # Type-casting the string to `float`.
-                   # If string is not a valid `float`, 
+                   # If string is not a valid `float`,
                    # it'll raise `ValueError` exception
     except ValueError:
         return False
@@ -230,10 +233,9 @@ def verify_query(identifiers, field):
     # Safeguard for guarantee that SIMBAD and NED identifiers found are
     # indeed in Solr index
     query = '{0}:({1})'.format(field, " OR ".join(identifiers))
-    headers = {'X-Forwarded-Authorization': request.headers.get('Authorization')}
     params = {'wt': 'json', 'q': query, 'fl': 'id',
               'rows': 10}
-    response = client().get(current_app.config.get('OBJECTS_SOLRQUERY_URL'), params=params,headers=headers)
+    response = current_app.client.get(current_app.config['OBJECTS_SOLRQUERY_URL'], params=query)
     if response.status_code != 200:
         return {"Error": "Unable to get results!",
                 "Error Info": "Solr response: %s" % str(response.text),

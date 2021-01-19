@@ -1,3 +1,4 @@
+from past.builtins import basestring
 import sys
 import os
 from flask_testing import TestCase
@@ -38,7 +39,7 @@ class TestWebservices(TestCase):
 
         for expected_field, _type in {'scopes': list, 'methods': list,
                                       'description': basestring,
-                                      'rate_limit': list}.iteritems():
+                                      'rate_limit': list}.items():
             # Assert each resource is described has the expected_field
             [self.assertIn(expected_field, v) for v in r.json.values()]
             # Assert every expected_field has the proper type

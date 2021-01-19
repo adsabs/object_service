@@ -1,21 +1,24 @@
+from __future__ import absolute_import
+from builtins import map
+from builtins import str
 from flask import current_app, request
 from flask_restful import Resource
 from flask_discoverer import advertise
 from flask import Response
-from SIMBAD import get_simbad_data
-from SIMBAD import simbad_position_query
-from SIMBAD import verify_tap_service
+from .SIMBAD import get_simbad_data
+from .SIMBAD import simbad_position_query
+from .SIMBAD import verify_tap_service
 
-from NED import get_ned_data
-from NED import get_NED_refcodes
-from NED import ned_position_query
+from .NED import get_ned_data
+from .NED import get_NED_refcodes
+from .NED import ned_position_query
 
-from utils import parse_query_string
-from utils import get_object_translations
-from utils import translate_query
-from utils import isBalanced
-from utils import parse_position_string
-from utils import verify_query
+from .utils import parse_query_string
+from .utils import get_object_translations
+from .utils import translate_query
+from .utils import isBalanced
+from .utils import parse_position_string
+from .utils import verify_query
 
 import time
 import timeout_decorator
@@ -51,7 +54,7 @@ class ObjectSearch(Resource):
         for itype in ['identifiers', 'objects']:
             try:
                 identifiers = request.json[itype]
-                identifiers = map(str, identifiers)
+                identifiers = list(map(str, identifiers))
                 input_type  = itype
             except:
                 pass
@@ -139,7 +142,7 @@ class QuerySearch(Resource):
         # Get the object names and individual object queries from the Solr query
         try:
             object_names, object_queries = parse_query_string(solr_query.replace('^',''))
-        except Exception, err:
+        except Exception as err:
             current_app.logger.error('Parsing the identifiers out of the query string blew up!')
             return {"Error": "Unable to get results!",
                     "Error Info": "Parsing the identifiers out of the query string blew up! (%s)"%str(err)}, 200
@@ -167,7 +170,7 @@ class QuerySearch(Resource):
             simbad_fail = False
             ned_fail = False
             sids = simbad_position_query(coordinates, radius)
-            if len(sids) > 0:
+            if len(sids) > 0 and type(sids) == list:
                 vq = verify_query(sids, 'simbid')
                 if not vq:
                     current_app.logger.info('SIMBAD identifiers not in Solr index: {0}'.format(",".join(sids)))
@@ -178,7 +181,7 @@ class QuerySearch(Resource):
                 simbad_fail = result['simbad']['Error Info']
                 result['simbad'] = []
             nids = ned_position_query(coordinates, radius)
-            if len(nids) > 0:
+            if len(nids) > 0 and type(nids) == list:
                 vq = verify_query(nids, 'nedid')
                 if not vq:
                     current_app.logger.info('NED identifiers not in Solr index: {0}'.format(",".join(nids)))
@@ -190,7 +193,7 @@ class QuerySearch(Resource):
                 result['ned'] = []
             # If both SIMBAD and NED errored out, return an error
             if simbad_fail and ned_fail:
-                return {"Error": "Unable to get results!", 
+                return {"Error": "Unable to get results!",
                         "Error Info": "{0}, {1}".format(simbad_fail, ned_fail)}, 200
             # Form the query in terms on simbid and nedid:
             cone_components = []
@@ -205,8 +208,8 @@ class QuerySearch(Resource):
         name2id = get_object_translations(object_names, targets)
         # Now we have all necessary information to created the translated query
         translated_query = translate_query(solr_query, object_queries, targets, object_names, name2id)
- 
-        return {'query': translated_query}        
+
+        return {'query': translated_query}
 
 class ClassicObjectSearch(Resource):
 
@@ -246,4 +249,4 @@ class ClassicObjectSearch(Resource):
         else:
             output = "\n".join(results['data'])
             return Response(output, mimetype='text/plain; charset=us-ascii')
-            
+

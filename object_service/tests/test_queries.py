@@ -1,3 +1,4 @@
+from __future__ import print_function
 import sys
 import os
 from flask_testing import TestCase
@@ -59,6 +60,6 @@ class TestQueryStringParsing(TestCase):
         for qstring, expected in test_cases.items():
             object_names, object_queries = parse(qstring)
             result = translate(qstring, object_queries, ['simbad', 'ned'], object_names, obj2id)
-            print qstring
-            print result
+            print(qstring)
+            print(result)
             self.assertEqual(result, expected)

@@ -1,3 +1,6 @@
+from __future__ import print_function
+from builtins import map
+from builtins import range
 import sys
 import os
 from flask_testing import TestCase
@@ -11,6 +14,8 @@ from object_service import app
 import json
 import httpretty
 import timeout_decorator
+import mock
+import pytest
 
 class TestConfig(TestCase):
 
@@ -85,8 +90,8 @@ class TestDataRetrieval(TestCase):
         '''Test to see if retrieval of NED objects method behaves as expected'''
         from object_service.NED import get_ned_data
         identifiers = ["LMC"]
-        mockdata = {u'NameResolver': u'NED-Egret', u'Copyright': u'(C) 2017 California Institute of Technology', 
-                    u'Preferred': {u'Name': u'Large Magellanic Cloud'}, 
+        mockdata = {u'NameResolver': u'NED-Egret', u'Copyright': u'(C) 2017 California Institute of Technology',
+                    u'Preferred': {u'Name': u'Large Magellanic Cloud'},
                     u'ResultCode': 3, u'StatusCode': 100}
         QUERY_URL = self.app.config.get('OBJECTS_NED_URL')
         httpretty.register_uri(
@@ -102,9 +107,9 @@ class TestDataRetrieval(TestCase):
     def test_get_ned_objects_unknown_object(self):
         '''Test to see if retrieval of NED objects method behaves as expected'''
         from object_service.NED import get_ned_data
-        identifiers = map(str, range(4))
+        identifiers = map(str, list(range(4)))
         def get_mock_data(v, status_code=100):
-            mockdata = {u'NameResolver': u'NED-Egret', 
+            mockdata = {u'NameResolver': u'NED-Egret',
                         u'Copyright': u'(C) 2017 California Institute of Technology',
                         u'Preferred': {u'Name': u'FOO BAR'}}
             try:
@@ -131,7 +136,7 @@ class TestDataRetrieval(TestCase):
 
         result = get_ned_data(identifiers, 'identifiers')
         expected = {'data': {'3': {'canonical': u'FOO BAR', 'id': '3'}},
-                    'skipped': ['0','1','2']} 
+                    'skipped': ['0','1','2']}
         self.assertEqual(result, expected)
 
     @httpretty.activate
@@ -206,106 +211,82 @@ class TestDataRetrieval(TestCase):
         expected = {"Error": "Unable to get results!", "Error Info": "NED returned status 500"}
         self.assertEqual(result, expected)
 
-    @httpretty.activate
-    def test_do_ned_lookup_readtimeout(self):
+    @mock.patch('object_service.NED.current_app.client.post')
+    def test_do_ned_lookup_readtimeout(self, mocked_post):
         '''Test to see if single NED object lookup throws proper exception at timeout'''
         from object_service.NED import do_ned_object_lookup
 
-        def exceptionCallback(request, uri, headers):
-            raise ReadTimeout('Connection timed out.')
+        mocked_post.side_effect = ReadTimeout('Connection timed out.')
 
         self.app.config['OBJECTS_NED_TIMEOUT'] = 0.1
         QUERY_URL = "http://aaaa.org"
-        httpretty.register_uri(
-            httpretty.POST, QUERY_URL,
-            body=exceptionCallback)
         result = do_ned_object_lookup(QUERY_URL, "bar")
         expected = {'Error': 'Unable to get results!', 'Error Info': 'NED request timed out: Connection timed out.'}
         self.assertDictEqual(result, expected)
 
-    @httpretty.activate
-    def test_do_ned_query_identifiers_readtimeout(self):
+    @mock.patch('object_service.NED.current_app.client.post')
+    def test_do_ned_query_identifiers_readtimeout(self, mocked_post):
         '''Test to see if single NED query throws proper exception at timeout'''
         from object_service.NED import get_ned_data
 
-        def exceptionCallback(request, uri, headers):
-            raise ReadTimeout('Connection timed out.')
+        mocked_post.side_effect = ReadTimeout('Connection timed out.')
 
         identifiers = ['FOO_BAR']
         self.app.config['OBJECTS_NED_TIMEOUT'] = 0.1
         QUERY_URL = self.app.config.get('OBJECTS_NED_URL')
-        httpretty.register_uri(
-            httpretty.POST, QUERY_URL,
-            body=exceptionCallback)
         result = get_ned_data(identifiers, "identifiers")
         expected = {'Error': 'Unable to get results!', 'Error Info': 'NED request timed out: Connection timed out.'}
         self.assertDictEqual(result, expected)
 
-    @httpretty.activate
-    def test_do_ned_query_objects_readtimeout(self):
+    @mock.patch('object_service.NED.current_app.client.post')
+    def test_do_ned_query_objects_readtimeout(self, mocked_post):
         '''Test to see if single NED query throws proper exception at timeout'''
         from object_service.NED import get_ned_data
 
-        def exceptionCallback(request, uri, headers):
-            raise ReadTimeout('Connection timed out.')
+        mocked_post.side_effect = ReadTimeout('Connection timed out.')
 
         identifiers = ['FOO_BAR']
         self.app.config['OBJECTS_NED_TIMEOUT'] = 0.1
         QUERY_URL = self.app.config.get('OBJECTS_NED_URL')
-        httpretty.register_uri(
-            httpretty.POST, QUERY_URL,
-            body=exceptionCallback)
         result = get_ned_data(identifiers, "objects")
         expected = {'Error': 'Unable to get results!', 'Error Info': 'NED request timed out: Connection timed out.'}
         self.assertDictEqual(result, expected)
 
-    @httpretty.activate
-    def test_do_ned_lookup_exception(self):
+    @mock.patch('object_service.NED.current_app.client.post')
+    def test_do_ned_lookup_exception(self, mocked_post):
         '''Test to see if single NED lookupthrows proper exception at timeout'''
         from object_service.NED import do_ned_object_lookup
 
-        def exceptionCallback(request, uri, headers):
-            raise Exception('Oops! Something went boink!')
+        mocked_post.side_effect = Exception('Oops! Something went boink!')
 
         self.app.config['OBJECTS_NED_TIMEOUT'] = 0.1
         QUERY_URL = "http://aaaa.org"
-        httpretty.register_uri(
-            httpretty.POST, QUERY_URL,
-            body=exceptionCallback)
         result = do_ned_object_lookup(QUERY_URL, "bar")
         expected = {'Error': 'Unable to get results!', 'Error Info': 'NED request failed (Oops! Something went boink!)'}
         self.assertDictEqual(result, expected)
 
-    @httpretty.activate
-    def test_do_ned_query_identifiers_exception(self):
+    @mock.patch('object_service.NED.current_app.client.post')
+    def test_do_ned_query_identifiers_exception(self, mocked_post):
         '''Test to see if single NED query hrows proper exception at timeout'''
         from object_service.NED import get_ned_data
 
-        def exceptionCallback(request, uri, headers):
-            raise Exception('Oops! Something went boink!')
- 
+        mocked_post.side_effect = Exception('Oops! Something went boink!')
+
         identifiers = ['FOO_BAR']
         QUERY_URL = self.app.config.get('OBJECTS_NED_URL')
-        httpretty.register_uri(
-            httpretty.POST, QUERY_URL,
-            body=exceptionCallback)
         result = get_ned_data(identifiers, "identifiers")
         expected = {'Error': 'Unable to get results!', 'Error Info': 'NED request failed (Oops! Something went boink!)'}
         self.assertDictEqual(result, expected)
 
-    @httpretty.activate
-    def test_do_ned_query_objects_exception(self):
+    @mock.patch('object_service.NED.current_app.client.post')
+    def test_do_ned_query_objects_exception(self, mocked_post):
         '''Test to see if single NED query hrows proper exception at timeout'''
         from object_service.NED import get_ned_data
 
-        def exceptionCallback(request, uri, headers):
-            raise Exception('Oops! Something went boink!')
+        mocked_post.side_effect = Exception('Oops! Something went boink!')
 
         identifiers = ['FOO_BAR']
         QUERY_URL = self.app.config.get('OBJECTS_NED_URL')
-        httpretty.register_uri(
-            httpretty.POST, QUERY_URL,
-            body=exceptionCallback)
         result = get_ned_data(identifiers, "objects")
         expected = {'Error': 'Unable to get results!', 'Error Info': 'NED request failed (Oops! Something went boink!)'}
         self.assertDictEqual(result, expected)
@@ -341,41 +322,33 @@ class TestDataRetrieval(TestCase):
         self.assertDictEqual(result, expected)
 
 
-    @httpretty.activate
-    def test_get_simbad_objects_timeout(self):
+    @mock.patch('object_service.SIMBAD.current_app.client.post')
+    def test_get_simbad_objects_timeout(self, mocked_post):
         '''Test to see if retrieval of SIMBAD objects method behaves as expected'''
         from object_service.SIMBAD import get_simbad_data
 
-        def exceptionCallback(request, uri, headers):
-            raise ReadTimeout('Connection timed out.')
+        mocked_post.side_effect = ReadTimeout('Connection timed out.')
 
         identifiers = ["3133169", "1575544"]
         self.app.config['OBJECTS_SIMBAD_TIMEOUT'] = 1
         QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
-        httpretty.register_uri(
-            httpretty.POST, QUERY_URL,
-            body=exceptionCallback)
         result = get_simbad_data(identifiers, 'identifiers')
         expected = {'Error': 'Unable to get results!', 'Error Info': 'SIMBAD request timed out: Connection timed out.'}
         self.assertDictEqual(result, expected)
 
-    @httpretty.activate
-    def test_get_simbad_position_query_timeout(self):
+    @mock.patch('object_service.SIMBAD.current_app.client.post')
+    def test_get_simbad_position_query_timeout(self, mocked_post):
         '''Test to see if SIMBAD position query method behaves as expected'''
         from object_service.SIMBAD import simbad_position_query
         from astropy.coordinates import SkyCoord
         from astropy.coordinates import Angle
         from astropy import units as u
 
-        def exceptionCallback(request, uri, headers):
-            raise ReadTimeout('Connection timed out.')
+        mocked_post.side_effect = ReadTimeout('Connection timed out.')
 
         identifiers = ["3133169", "1575544"]
         self.app.config['OBJECTS_SIMBAD_TIMEOUT'] = 1
         QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
-        httpretty.register_uri(
-            httpretty.POST, QUERY_URL,
-            body=exceptionCallback)
         c = SkyCoord("0.1 0.1", unit=(u.deg, u.deg))
         r = Angle('0.1 degrees')
         result = simbad_position_query(c, r)
@@ -383,24 +356,20 @@ class TestDataRetrieval(TestCase):
 
         self.assertDictEqual(result, expected)
 
-    @httpretty.activate
-    def test_get_ned_position_query_timeout(self):
+    @mock.patch('object_service.NED.current_app.client.get')
+    def test_get_ned_position_query_timeout(self, mocked_post):
         '''Test to see if NED position query method behaves as expected'''
         from object_service.NED import ned_position_query
         from astropy.coordinates import SkyCoord
         from astropy.coordinates import Angle
         from astropy import units as u
 
-        def exceptionCallback(request, uri, headers):
-            raise ReadTimeout('Connection timed out.')
+        mocked_post.side_effect = ReadTimeout('Connection timed out.')
 
         identifiers = ["3133169", "1575544"]
         self.app.config['OBJECTS_SIMBAD_TIMEOUT'] = 1
         QUERY_URL = self.app.config.get('OBJECTS_NED_OBJSEARCH')
-        httpretty.register_uri(
-            httpretty.GET, QUERY_URL,
-            body=exceptionCallback)
-        
+
         c = SkyCoord("11.1 11.1", unit=(u.deg, u.deg))
         r = Angle('0.1 degrees')
         result = ned_position_query(c, r)
@@ -408,23 +377,19 @@ class TestDataRetrieval(TestCase):
 
         self.assertDictEqual(result, expected)
 
-    @httpretty.activate
-    def test_get_ned_position_query_exception(self):
+    @mock.patch('object_service.NED.current_app.client.get')
+    def test_get_ned_position_query_exception(self, mocked_post):
         '''Test to see if NED position query method behaves as expected'''
         from object_service.NED import ned_position_query
         from astropy.coordinates import SkyCoord
         from astropy.coordinates import Angle
         from astropy import units as u
 
-        def exceptionCallback(request, uri, headers):
-            raise Exception('Houston, we have a problem!')
+        mocked_post.side_effect = Exception('Houston, we have a problem!')
 
         identifiers = ["3133169", "1575544"]
         self.app.config['OBJECTS_SIMBAD_TIMEOUT'] = 1
         QUERY_URL = self.app.config.get('OBJECTS_NED_OBJSEARCH')
-        httpretty.register_uri(
-            httpretty.GET, QUERY_URL,
-            body=exceptionCallback)
         c = SkyCoord("11.1 11.1", unit=(u.deg, u.deg))
         r = Angle('0.1 degrees')
         result = ned_position_query(c, r)
@@ -432,20 +397,16 @@ class TestDataRetrieval(TestCase):
 
         self.assertDictEqual(result, expected)
 
-    @httpretty.activate
-    def test_get_simbad_objects_exception(self):
+    @mock.patch('object_service.SIMBAD.current_app.client.post')
+    def test_get_simbad_objects_exception(self, mocked_post):
         '''Test to see if retrieval of SIMBAD objects method behaves as expected'''
         from object_service.SIMBAD import get_simbad_data
 
-        def exceptionCallback(request, uri, headers):
-            raise Exception('Oops! Something went boink!')
+        mocked_post.side_effect = Exception('Oops! Something went boink!')
 
         identifiers = ["3133169", "1575544"]
         self.app.config['OBJECTS_SIMBAD_TIMEOUT'] = 1
         QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
-        httpretty.register_uri(
-            httpretty.POST, QUERY_URL,
-            body=exceptionCallback)
         result = get_simbad_data(identifiers, 'identifiers')
         expected = {'Error': 'Unable to get results!', 'Error Info': 'SIMBAD request failed (not timeout): Oops! Something went boink!'}
         self.assertDictEqual(result, expected)
@@ -470,33 +431,26 @@ class TestDataRetrieval(TestCase):
         # Next query with this positional information
         result = simbad_position_query(coords, radius)
         expected = [u'2011AcA....61..103G', u'2003A&A...405..111G']
-        self.assertEqual(result, expected)
+        for b in expected:
+            self.assertIn(b, result)
 
-    @httpretty.activate
-    def test_do_cone_search_exception(self):
+    @mock.patch('object_service.SIMBAD.current_app.client.post')
+    def test_do_cone_search_exception(self, mocked_post):
         '''Test to see if SIMBAD cone search method behaves as expected'''
         from object_service.SIMBAD import simbad_position_query
         from astropy.coordinates import SkyCoord
         from astropy.coordinates import Angle
         from astropy import units as u
 
-        def exceptionCallback(request, uri, headers):
-            raise Exception('Oops! Something went boink!')
+        mocked_post.side_effect = Exception('Oops! Something went boink!')
 
         pstring = "80.89416667 -69.75611111:0.166666"
         mockdata = {"data":[["2003A&A...405..111G"],["2011AcA....61..103G"]]}
         QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')
-        httpretty.register_uri(
-            httpretty.POST, QUERY_URL,
-            content_type='application/json',
-            status=200,
-            body=exceptionCallback)
         # First parse the position string and see we if get the expected results back
         c = SkyCoord("80.89416667 -69.7561111", unit=(u.deg, u.deg))
         r = Angle('0.2 degrees')
         result = simbad_position_query(c, r)
-        print "XXXX"
-        print result
         expected = {'Error Info': 'SIMBAD request failed (not timeout): Oops! Something went boink!', 'Error': u'Unable to get results!'}
         self.assertDictEqual(result, expected)
 
@@ -507,9 +461,6 @@ class TestDataRetrieval(TestCase):
         from astropy.coordinates import SkyCoord
         from astropy.coordinates import Angle
         from astropy import units as u
-
-        def exceptionCallback(request, uri, headers):
-            raise Exception('Oops! Something went boink!')
 
         mockdata = {"foo":"bar"}
         QUERY_URL = self.app.config.get('OBJECTS_SIMBAD_TAP_URL')

@@ -1,3 +1,4 @@
+from builtins import str
 import re
 from flask import current_app
 from requests.exceptions import ConnectTimeout, ReadTimeout
@@ -29,7 +30,7 @@ def do_tap_query(query, search_type, maxrec):
     except (ConnectTimeout, ReadTimeout) as err:
         current_app.logger.info('SIMBAD request to %s timed out! Request took longer than %s second(s)'%(QUERY_URL, TIMEOUT))
         return {"Error": "Unable to get results!", "Error Info": "SIMBAD request timed out: {0}".format(err)}
-    except Exception, err:
+    except Exception as err:
         current_app.logger.error("SIMBAD request to %s failed (%s)"%(QUERY_URL, err))
         return {"Error": "Unable to get results!", "Error Info": "SIMBAD request failed (not timeout): %s"%err}
     # Report if the SIMBAD server did not like our query
@@ -72,11 +73,11 @@ def get_simbad_data(id_list, input_type):
     if input_type == 'objects':
         results['data'] = {k:None for k in id_list}
         # For the object names query we want to have all variants returned, cache them, and select only those entries that match the input
-        qfilter = " OR ".join(map(lambda a: "ident2.id=\'%s\'"%a, id_list))
+        qfilter = " OR ".join(["ident2.id=\'%s\'"%a for a in id_list])
         q = 'SELECT ident1.oidref, ident1.id, basic.main_id FROM ident AS ident1 JOIN ident AS ident2 ON ident1.oidref = ident2.oidref JOIN basic ON ident1.oidref = basic.oid WHERE %s;' % qfilter
     elif input_type == 'identifiers':
         # For the identifiers query we just want to have the canonical names returned
-        qfilter = " OR ".join(map(lambda a: "oid=\'%s\'"%a,id_list))
+        qfilter = " OR ".join(["oid=\'%s\'"%a for a in id_list])
         q = "SELECT oid, main_id, main_id FROM basic WHERE %s;" % qfilter
     else:
         return {"Error": "Unable to get results!", "Error Info": "Unknown input type specified!"}
@@ -122,6 +123,6 @@ def simbad_position_query(COORD, RADIUS):
         return r
     try:
         simbids = list(set([str(d[0]) for d in r['data']]))
-    except Exception, err:
+    except Exception as err:
         return {'Error': 'Unable to get results!', 'Error Info': 'Unable to retrieve SIMBAD identifiers from SIMBAD response (no "data" key)!'}
     return simbids
