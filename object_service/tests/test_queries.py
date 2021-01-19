@@ -57,7 +57,7 @@ class TestQueryStringParsing(TestCase):
             'citations(object:(X OR Y) OR fulltext:X) -foo:bar object:Z':'citations(((=abs:(X OR Y) OR simbid:(123 OR 456) OR nedid:(XXX OR YYY)) database:astronomy) OR fulltext:X) -foo:bar ((=abs:Z OR simbid:789 OR nedid:0) database:astronomy)'
         }
         
-        for qstring, expected in list(test_cases.items()):
+        for qstring, expected in test_cases.items():
             object_names, object_queries = parse(qstring)
             result = translate(qstring, object_queries, ['simbad', 'ned'], object_names, obj2id)
             print(qstring)
