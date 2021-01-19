@@ -41,7 +41,7 @@ class TestConfig(TestCase):
                     "OBJECTS_SOLRQUERY_URL",
                     "API_URL"
                     ]
-        missing = [x for x in required if x not in list(self.app.config.keys())]
+        missing = [x for x in required if x not in self.app.config.keys()]
         self.assertTrue(len(missing) == 0)
 
 class TestDataRetrieval(TestCase):
@@ -107,7 +107,7 @@ class TestDataRetrieval(TestCase):
     def test_get_ned_objects_unknown_object(self):
         '''Test to see if retrieval of NED objects method behaves as expected'''
         from object_service.NED import get_ned_data
-        identifiers = list(map(str, list(range(4))))
+        identifiers = map(str, list(range(4)))
         def get_mock_data(v, status_code=100):
             mockdata = {u'NameResolver': u'NED-Egret',
                         u'Copyright': u'(C) 2017 California Institute of Technology',

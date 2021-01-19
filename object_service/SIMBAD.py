@@ -94,7 +94,7 @@ def get_simbad_data(id_list, input_type):
         if input_type == 'objects':
             res = {cleanup_object_name(d[1]).upper(): {"canonical": cleanup_object_name(d[2]), "id": str(d[0])} for d in r['data']}
             results['data'] = res.copy()
-            results['data'].update({k.replace(' ',''):v for k,v in list(results['data'].items())})
+            results['data'].update({k.replace(' ',''):v for k,v in results['data'].items()})
         else:
             results['data'] = {str(d[0]): {"canonical": cleanup_object_name(d[2]), "id": str(d[0])} for d in r['data']}
     except:

@@ -129,7 +129,7 @@ def get_object_translations(onames, trgts):
                 continue
             try:
                 # We need to have a 'try' here in case a service returns an empty 'data' attribute
-                idmap[trgt][oname] =[e.get('id',0) for e in list(result['data'].values())][0]
+                idmap[trgt][oname] =[e.get('id',0) for e in result['data'].values()][0]
             except:
                 continue
 

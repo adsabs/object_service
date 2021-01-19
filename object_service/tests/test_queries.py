@@ -34,7 +34,7 @@ class TestQueryStringParsing(TestCase):
             'citations(reviews(popular(object:("M 1" OR M81) OR =abs:Andromeda))) year:2010 property:refereed': [['M 1', 'M81'],['object:("M 1" OR M81)']],
             }
 
-        for qstring, expected in list(test_cases.items()):
+        for qstring, expected in test_cases.items():
             object_names, object_queries = parse(qstring)
             self.assertEqual(object_names, expected[0])
             self.assertEqual(object_queries, expected[1])

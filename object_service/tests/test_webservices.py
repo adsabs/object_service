@@ -41,10 +41,10 @@ class TestWebservices(TestCase):
                                       'description': basestring,
                                       'rate_limit': list}.items():
             # Assert each resource is described has the expected_field
-            [self.assertIn(expected_field, v) for v in list(r.json.values())]
+            [self.assertIn(expected_field, v) for v in r.json.values()]
             # Assert every expected_field has the proper type
             [self.assertIsInstance(v[expected_field], _type)
-             for v in list(r.json.values())]
+             for v in r.json.values()]
 
 if __name__ == '__main__':
     unittest.main()
