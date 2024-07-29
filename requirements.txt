@@ -5,3 +5,6 @@ future==0.18.2
 ply==3.11
 simplejson==3.10.0
 timeout-decorator==0.3.2
+markupsafe<=2.0.1
+itsdangerous<=2.0.1
+werkzeug<=2.0.3 
