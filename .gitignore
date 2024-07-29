@@ -12,3 +12,6 @@ venv
 */logs
 logs
 python
+Dockerfile
+docker-compose.yaml
+scripts/
